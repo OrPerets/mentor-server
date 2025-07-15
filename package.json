@@ -1,0 +1,27 @@
+{
+  "name": "databases-mentor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@ai-sdk/openai": "^0.0.40",
+    "ai": "^3.2.43",
+    "axios": "^1.7.2",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "flat": "^6.0.1",
+    "mongodb": "^6.8.0",
+    "node-fetch": "^2.6.1",
+    "openai": "^4.52.3",
+    "vercel": "^35.2.3",
+    "zod": "^3.23.8"
+  }
+}

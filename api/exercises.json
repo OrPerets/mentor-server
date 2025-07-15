@@ -1,0 +1,722 @@
+[
+  {
+    "id": 1,
+    "question": "כתוב שאילתה שמחזירה את כל הבסיסים הממוקמים בצפון מטבלת AirBases.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "easy",
+    "solution_example": "SELECT * FROM AirBases WHERE location = 'צפון';",
+    "points": 5
+  },
+  {
+    "id": 2,
+    "question": "כתוב שאילתה שמחזירה את שמות הטייסות שמספר הטייסים הפעילים שלהן נמוך מ-20 מטבלת Squadrons.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "easy",
+    "solution_example": "SELECT squadron_name FROM Squadrons WHERE active_pilots < 20;",
+    "points": 5
+  },
+  {
+    "id": 3,
+    "question": "כתוב שאילתה שמחזירה את שמות הטייסים שמשרתים בבסיס 'RMD' ומשכורתם מעל 17000 ש״ח.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE", "AND"],
+    "difficulty": "easy",
+    "solution_example": "SELECT pilot_name FROM Pilots p JOIN AirBases a ON p.base_id = a.base_id WHERE a.base_code = 'RMD' AND p.salary > 17000;",
+    "points": 5
+  },
+  {
+    "id": 4,
+    "question": "כתוב ביטוי אלגברה יחסית לבחירת כלי טיס מהטבלה Aircraft שהם מסוג 'F-16'.",
+    "expected_keywords": ["σ", "aircraft_type", "F-16", "Aircraft"],
+    "difficulty": "easy",
+    "solution_example": "σ_aircraft_type='F-16'(Aircraft)",
+    "points": 5
+  },
+  {
+    "id": 5,
+    "question": "כתוב שאילתה שמחזירה את שמות הבסיסים מטבלת AirBases שיש בהם יותר מ-1000 איש צוות.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "easy",
+    "solution_example": "SELECT base_name FROM AirBases WHERE personnel_capacity > 1000;",
+    "points": 5
+  },
+  {
+    "id": 6,
+    "question": "כתוב ביטוי אלגברה יחסית להטלת עמודות weapon_name ו-cost_per_unit מטבלת Weapons.",
+    "expected_keywords": ["π", "weapon_name", "cost_per_unit", "Weapons"],
+    "difficulty": "easy",
+    "solution_example": "π_weapon_name,cost_per_unit(Weapons)",
+    "points": 5
+  },
+  {
+    "id": 7,
+    "question": "כתוב שאילתה שמחזירה את הטייסות שהוקמו לפני שנת 1980 ומתמחות במשימות 'קרב' מטבלת Squadrons.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE", "AND"],
+    "difficulty": "easy",
+    "solution_example": "SELECT squadron_name FROM Squadrons WHERE established_year < 1980 AND mission_type = 'קרב';",
+    "points": 5
+  },
+  {
+    "id": 8,
+    "question": "כתוב שאילתה שמחזירה את שמות כלי הנשק היקרים ביותר (עלות מעל 1000 אלפי ש״ח) ואת הטווח שלהם.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "easy",
+    "solution_example": "SELECT weapon_name, range_km FROM Weapons WHERE cost_per_unit > 1000;",
+    "points": 5
+  },
+  {
+    "id": 9,
+    "question": "כתוב שאילתה שמחזירה את המשכורת הממוצעת של טייסים לכל טייסת מטבלת Pilots.",
+    "expected_keywords": ["SELECT", "AVG", "FROM", "GROUP BY"],
+    "difficulty": "medium",
+    "solution_example": "SELECT squadron_id, AVG(salary) as avg_salary FROM Pilots GROUP BY squadron_id;",
+    "points": 10
+  },
+  {
+    "id": 10,
+    "question": "כתוב שאילתה שמציגה את כמות כלי הטיס בכל טייסת מטבלת Aircraft, ממוינת לפי מספר הטייסת.",
+    "expected_keywords": ["SELECT", "COUNT", "FROM", "GROUP BY", "ORDER BY"],
+    "difficulty": "medium",
+    "solution_example": "SELECT s.squadron_number, COUNT(*) as aircraft_count FROM Aircraft a JOIN Squadrons s ON a.squadron_id = s.squadron_id GROUP BY s.squadron_number ORDER BY s.squadron_number;",
+    "points": 10
+  },
+  {
+    "id": 11,
+    "question": "כתוב שאילתה שמחזירה את שמות הטייסים ושמות הטייסות שלהם. השתמש ב-JOIN בין Pilots ו-Squadrons.",
+    "expected_keywords": ["SELECT", "FROM", "JOIN", "ON"],
+    "difficulty": "medium",
+    "solution_example": "SELECT p.pilot_name, s.squadron_name FROM Pilots p JOIN Squadrons s ON p.squadron_id = s.squadron_id;",
+    "points": 10
+  },
+  {
+    "id": 12,
+    "question": "כתוב שאילתה שמחזירה את כלי הטיס המהירים ביותר (מהירות מעל 2000 קמ״ש) שהטווח שלהם פחות מ-3000 ק״מ מטבלת Aircraft.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE", "AND"],
+    "difficulty": "medium",
+    "solution_example": "SELECT aircraft_type, tail_number FROM Aircraft WHERE max_speed > 2000 AND range_km < 3000;",
+    "points": 10
+  },
+  {
+    "id": 13,
+    "question": "כתוב שאילתה שמחזירה את שמות הבסיסים ואת מספר הטייסים הממוצע בהם, רק עבור בסיסים ברמת ביטחון גבוהה מ-8.",
+    "expected_keywords": ["SELECT", "AVG", "FROM", "WHERE", "GROUP BY"],
+    "difficulty": "medium",
+    "solution_example": "SELECT b.base_name, AVG(s.active_pilots) FROM AirBases b JOIN Squadrons s ON b.base_id = s.base_id WHERE b.security_level > 8 GROUP BY b.base_name;",
+    "points": 10
+  },
+  {
+    "id": 14,
+    "question": "כתוב שאילתה שמחזירה את העלות הממוצעת לשעת טיסה (אלפי ש״ח/שעה) של כל סוג כלי טיס מטבלת Aircraft.",
+    "expected_keywords": ["SELECT", "AVG", "FROM", "GROUP BY"],
+    "difficulty": "medium",
+    "solution_example": "SELECT aircraft_type, AVG(cost_per_hour) as avg_cost_per_hour FROM Aircraft GROUP BY aircraft_type;",
+    "points": 10
+  },
+  {
+    "id": 15,
+    "question": "כתוב ביטוי אלגברה יחסית לאיחוד (Union) של טייסים מרמת דוד וטייסים מחצרים.",
+    "expected_keywords": ["∪", "σ", "Pilots", "base_id"],
+    "difficulty": "medium",
+    "solution_example": "σ_base_id=1(Pilots) ∪ σ_base_id=2(Pilots)",
+    "points": 10
+  },
+  {
+    "id": 16,
+    "question": "כתוב שאילתה שמחזירה את כלי הטיס ואת שמות הטייסות שלהן, כולל כלי טיס שאין להם טייסת (LEFT JOIN).",
+    "expected_keywords": ["SELECT", "FROM", "LEFT JOIN", "ON"],
+    "difficulty": "medium",
+    "solution_example": "SELECT a.tail_number, s.squadron_name FROM Aircraft a LEFT JOIN Squadrons s ON a.squadron_id = s.squadron_id;",
+    "points": 10
+  },
+  {
+    "id": 17,
+    "question": "כתוב שאילתה שמחזירה את שנת הייסוד הממוצעת של הטייסות בכל סוג משימה מטבלת Squadrons.",
+    "expected_keywords": ["SELECT", "AVG", "FROM", "GROUP BY"],
+    "difficulty": "medium",
+    "solution_example": "SELECT mission_type, AVG(established_year) as avg_established_year FROM Squadrons GROUP BY mission_type;",
+    "points": 10
+  },
+  {
+    "id": 18,
+    "question": "כתוב שאילתה שמציגה את יחס 'עומס הטייסים' של כל טייסת - מספר הטייסים הפעילים חלקי כמות כלי הטיס מטבלת Squadrons.",
+    "expected_keywords": ["SELECT", "FROM", "/", "active_pilots", "aircraft_count"],
+    "difficulty": "medium",
+    "solution_example": "SELECT squadron_name, (active_pilots / aircraft_count) as pilot_to_aircraft_ratio FROM Squadrons;",
+    "points": 10
+  },
+  {
+    "id": 19,
+    "question": "כתוב שאילתה שמחזירה את שמות הטייסים, שמות הבסיסים ושמות הטייסות שלהם באמצעות JOIN משולש.",
+    "expected_keywords": ["SELECT", "FROM", "JOIN", "ON"],
+    "difficulty": "hard",
+    "solution_example": "SELECT p.pilot_name, b.base_name, s.squadron_name FROM Pilots p JOIN AirBases b ON p.base_id = b.base_id JOIN Squadrons s ON p.squadron_id = s.squadron_id;",
+    "points": 15
+  },
+  {
+    "id": 20,
+    "question": "כתוב ביטוי אלגברה יחסית שמחבר את הטבלאות Squadrons ו-Aircraft על בסיס squadron_id ומחזיר רק טייסות עם כלי טיס מסוג 'F-35'.",
+    "expected_keywords": ["⋈", "σ", "Squadrons", "Aircraft", "F-35"],
+    "difficulty": "hard",
+    "solution_example": "σ_aircraft_type='F-35'(Squadrons ⋈_Squadrons.squadron_id=Aircraft.squadron_id Aircraft)",
+    "points": 15
+  },
+  {
+    "id": 21,
+    "question": "כתוב שאילתה שמחזירה את כמות הטייסים בכל בסיס, רק עבור בסיסים שיש בהם יותר מ-20 טייסים.",
+    "expected_keywords": ["SELECT", "COUNT", "FROM", "GROUP BY", "HAVING"],
+    "difficulty": "hard",
+    "solution_example": "SELECT base_id, COUNT(*) as pilot_count FROM Pilots GROUP BY base_id HAVING COUNT(*) > 20;",
+    "points": 15
+  },
+  {
+    "id": 22,
+    "question": "כתוב שאילתה שמחזירה את הטייסים ששעות הטיסה שלהם גבוהות משעות הטיסה הממוצעות של כל הטייסים.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE", "AVG", "subquery"],
+    "difficulty": "hard",
+    "solution_example": "SELECT pilot_name, flight_hours FROM Pilots WHERE flight_hours > (SELECT AVG(flight_hours) FROM Pilots);",
+    "points": 15
+  },
+  {
+    "id": 23,
+    "question": "כתוב ביטוי אלגברה יחסית להצגת הפרש (Difference) בין כל כלי הנשק לבין כלי הנשק מסוג 'אוויר-אוויר'.",
+    "expected_keywords": ["−", "σ", "Weapons", "weapon_type"],
+    "difficulty": "hard",
+    "solution_example": "Weapons − σ_weapon_type='אוויר-אוויר'(Weapons)",
+    "points": 15
+  },
+  {
+    "id": 24,
+    "question": "כתוב שאילתה שמחזירה את שמות הבסיסים שיש בהן גם טייסים וגם כלי נשק (באמצעות INTERSECT או EXISTS).",
+    "expected_keywords": ["SELECT", "DISTINCT", "FROM", "WHERE", "EXISTS"],
+    "difficulty": "hard",
+    "solution_example": "SELECT DISTINCT b.base_name FROM AirBases b WHERE EXISTS (SELECT 1 FROM Pilots p WHERE p.base_id = b.base_id) AND EXISTS (SELECT 1 FROM Weapons w WHERE w.storage_base_id = b.base_id);",
+    "points": 15
+  },
+  {
+    "id": 25,
+    "question": "כתוב שאילתה שמחזירה את פירוט עלות התפעול החודשית עבור כל טייס (שם, משכורת, עלות טיסה חודשית), בהנחה של 20 שעות טיסה בחודש.",
+    "expected_keywords": ["SELECT", "FROM", "JOIN", "*"],
+    "difficulty": "hard",
+    "solution_example": "SELECT p.pilot_name, p.salary, (a.cost_per_hour * 20) as monthly_flight_cost FROM Pilots p JOIN Aircraft a ON p.squadron_id = a.squadron_id;",
+    "points": 15
+  },
+  {
+    "id": 26,
+    "question": "כתוב שאילתה שמחזירה את כל כלי הטיס במצב 'פעיל' מטבלת Aircraft.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "easy",
+    "solution_example": "SELECT * FROM Aircraft WHERE status = 'פעיל';",
+    "points": 5
+  },
+  {
+    "id": 27,
+    "question": "כתוב שאילתה שמחזירה את שמות הבסיסים שהוקמו לפני שנת 1950 מטבלת AirBases.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "easy",
+    "solution_example": "SELECT base_name FROM AirBases WHERE established_year < 1950;",
+    "points": 5
+  },
+  {
+    "id": 28,
+    "question": "כתוב שאילתה שמחזירה את כלי הנשק שהמלאי שלהם נמוך מהמינימום הנדרש מטבלת Weapons.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "easy",
+    "solution_example": "SELECT weapon_name FROM Weapons WHERE stock_quantity < minimum_stock;",
+    "points": 5
+  },
+  {
+    "id": 29,
+    "question": "כתוב ביטוי אלגברה יחסית לבחירת טייסים מהטבלה Pilots עם דרגה 'רס\"ן'.",
+    "expected_keywords": ["σ", "rank", "רס\"ן", "Pilots"],
+    "difficulty": "easy",
+    "solution_example": "σ_rank='רס\"ן'(Pilots)",
+    "points": 5
+  },
+  {
+    "id": 30,
+    "question": "כתוב שאילתה שמחזירה את המשימות בסטטוס 'הושלמה' מטבלת Missions.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "easy",
+    "solution_example": "SELECT * FROM Missions WHERE mission_status = 'הושלמה';",
+    "points": 5
+  },
+  {
+    "id": 31,
+    "question": "כתוב ביטוי אלגברה יחסית להטלת עמודות base_name ו-location מטבלת AirBases.",
+    "expected_keywords": ["π", "base_name", "location", "AirBases"],
+    "difficulty": "easy",
+    "solution_example": "π_base_name,location(AirBases)",
+    "points": 5
+  },
+  {
+    "id": 32,
+    "question": "כתוב שאילתה שמחזירה את הטייסים בגילאי 25-35 מטבלת Pilots.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE", "BETWEEN"],
+    "difficulty": "easy",
+    "solution_example": "SELECT pilot_name FROM Pilots WHERE age BETWEEN 25 AND 35;",
+    "points": 5
+  },
+  {
+    "id": 33,
+    "question": "כתוב שאילתה שמחזירה את כלי הטיס שיוצרו אחרי שנת 2010 מטבלת Aircraft.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "easy",
+    "solution_example": "SELECT aircraft_type, tail_number FROM Aircraft WHERE manufacture_year > 2010;",
+    "points": 5
+  },
+  {
+    "id": 34,
+    "question": "כתוב שאילתה שמחזירה את הטייסות שמספר כלי הטיס שלהן גדול מ-15 מטבלת Squadrons.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "easy",
+    "solution_example": "SELECT squadron_name FROM Squadrons WHERE aircraft_count > 15;",
+    "points": 5
+  },
+  {
+    "id": 35,
+    "question": "כתוב שאילתה שמחזירה את שמות כלי הנשק מסוג 'אוויר-קרקע' מטבלת Weapons.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "easy",
+    "solution_example": "SELECT weapon_name FROM Weapons WHERE weapon_type = 'אוויר-קרקע';",
+    "points": 5
+  },
+  {
+    "id": 36,
+    "question": "כתוב שאילתה שמחזירה את הבסיסים עם יותר מ-2 מסלולי נחיתה מטבלת AirBases.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "easy",
+    "solution_example": "SELECT base_name FROM AirBases WHERE runways_count > 2;",
+    "points": 5
+  },
+  {
+    "id": 37,
+    "question": "כתוב שאילתה שמחזירה את הטייסים עם התמחות 'קרב אוויר' מטבלת Pilots.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "easy",
+    "solution_example": "SELECT pilot_name FROM Pilots WHERE specialty = 'קרב אוויר';",
+    "points": 5
+  },
+  {
+    "id": 38,
+    "question": "כתוב ביטוי אלגברה יחסית לבחירת משימות מהטבלה Missions עם רמת עדיפות 5.",
+    "expected_keywords": ["σ", "priority_level", "Missions"],
+    "difficulty": "easy",
+    "solution_example": "σ_priority_level=5(Missions)",
+    "points": 5
+  },
+  {
+    "id": 39,
+    "question": "כתוב שאילתה שמחזירה את כלי הטיס שעברו יותר מ-5000 שעות טיסה מטבלת Aircraft.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "easy",
+    "solution_example": "SELECT tail_number, flight_hours_total FROM Aircraft WHERE flight_hours_total > 5000;",
+    "points": 5
+  },
+  {
+    "id": 40,
+    "question": "כתוב שאילתה שמחזירה את הטייסות המתמחות ב'תובלה' או ב'חילוץ' מטבלת Squadrons.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE", "OR"],
+    "difficulty": "easy",
+    "solution_example": "SELECT squadron_name FROM Squadrons WHERE mission_type = 'תובלה' OR mission_type = 'חילוץ';",
+    "points": 5
+  },
+  {
+    "id": 41,
+    "question": "כתוב ביטוי אלגברה יחסית להטלת עמודות pilot_name ו-rank מטבלת Pilots.",
+    "expected_keywords": ["π", "pilot_name", "rank", "Pilots"],
+    "difficulty": "easy",
+    "solution_example": "π_pilot_name,rank(Pilots)",
+    "points": 5
+  },
+  {
+    "id": 42,
+    "question": "כתוב שאילתה שמחזירה את כלי הנשק עם טווח פחות מ-50 ק\"מ מטבלת Weapons.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "easy",
+    "solution_example": "SELECT weapon_name, range_km FROM Weapons WHERE range_km < 50;",
+    "points": 5
+  },
+  {
+    "id": 43,
+    "question": "כתוב שאילתה שמחזירה את הבסיסים ברמת ביטחון מעל 8 מטבלת AirBases.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "easy",
+    "solution_example": "SELECT base_name, security_level FROM AirBases WHERE security_level > 8;",
+    "points": 5
+  },
+  {
+    "id": 44,
+    "question": "כתוב שאילתה שמחזירה את המשימות שארכו יותר מ-3 שעות מטבלת Missions.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "easy",
+    "solution_example": "SELECT mission_name, flight_duration_hours FROM Missions WHERE flight_duration_hours > 3;",
+    "points": 5
+  },
+  {
+    "id": 45,
+    "question": "כתוב שאילתה שמחזירה את הטייסים עם יותר מ-10 שנות ניסיון מטבלת Pilots.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "easy",
+    "solution_example": "SELECT pilot_name, experience_years FROM Pilots WHERE experience_years > 10;",
+    "points": 5
+  },
+  {
+    "id": 46,
+    "question": "כתוב שאילתה שמחזירה את כמות הטייסים הכוללת בכל בסיס מטבלת Pilots.",
+    "expected_keywords": ["SELECT", "COUNT", "FROM", "GROUP BY"],
+    "difficulty": "medium",
+    "solution_example": "SELECT base_id, COUNT(*) as total_pilots FROM Pilots GROUP BY base_id;",
+    "points": 10
+  },
+  {
+    "id": 47,
+    "question": "כתוב שאילתה שמחזירה את העלות הכוללת של כל סוג כלי נשק במלאי מטבלת Weapons.",
+    "expected_keywords": ["SELECT", "SUM", "FROM", "GROUP BY"],
+    "difficulty": "medium",
+    "solution_example": "SELECT weapon_type, SUM(cost_per_unit * stock_quantity) as total_value FROM Weapons GROUP BY weapon_type;",
+    "points": 10
+  },
+  {
+    "id": 48,
+    "question": "כתוב שאילתה שמחזירה את שעות הטיסה הממוצעות של הטייסים בכל טייסת מטבלת Pilots.",
+    "expected_keywords": ["SELECT", "AVG", "FROM", "GROUP BY"],
+    "difficulty": "medium",
+    "solution_example": "SELECT squadron_id, AVG(flight_hours) as avg_flight_hours FROM Pilots GROUP BY squadron_id;",
+    "points": 10
+  },
+  {
+    "id": 49,
+    "question": "כתוב שאילתה שמחזירה את כלי הטיס ושמות הטייסות שלהם מטבלאות Aircraft ו-Squadrons.",
+    "expected_keywords": ["SELECT", "FROM", "JOIN", "ON"],
+    "difficulty": "medium",
+    "solution_example": "SELECT a.tail_number, s.squadron_name FROM Aircraft a JOIN Squadrons s ON a.squadron_id = s.squadron_id;",
+    "points": 10
+  },
+  {
+    "id": 50,
+    "question": "כתוב שאילתה שמחזירה את המשימות ושמות הטייסים המבצעים אותן, ממוינות לפי תאריך.",
+    "expected_keywords": ["SELECT", "FROM", "JOIN", "ORDER BY"],
+    "difficulty": "medium",
+    "solution_example": "SELECT m.mission_name, p.pilot_name, m.start_date FROM Missions m JOIN Pilots p ON m.pilot_id = p.pilot_id ORDER BY m.start_date;",
+    "points": 10
+  },
+  {
+    "id": 51,
+    "question": "כתוב שאילתה שמחזירה את הטייסות שמספר הטייסים הפעילים שלהן מעל הממוצע של כל הטייסות.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE", "AVG", "subquery"],
+    "difficulty": "hard",
+    "solution_example": "SELECT squadron_name FROM Squadrons WHERE active_pilots > (SELECT AVG(active_pilots) FROM Squadrons);",
+    "points": 15
+  },
+  {
+    "id": 52,
+    "question": "כתוב שאילתה שמחזירה את הכמות המינימלית והמרבית של מסלולים בבסיסים מטבלת AirBases.",
+    "expected_keywords": ["SELECT", "MIN", "MAX", "FROM"],
+    "difficulty": "medium",
+    "solution_example": "SELECT MIN(runways_count) as min_runways, MAX(runways_count) as max_runways FROM AirBases;",
+    "points": 10
+  },
+  {
+    "id": 53,
+    "question": "כתוב ביטוי אלגברה יחסית לאיחוד (Union) של טייסים ברמת סיווג 9 וטייסים ברמת סיווג 10.",
+    "expected_keywords": ["∪", "σ", "Pilots", "security_clearance"],
+    "difficulty": "medium",
+    "solution_example": "σ_security_clearance=9(Pilots) ∪ σ_security_clearance=10(Pilots)",
+    "points": 10
+  },
+  {
+    "id": 54,
+    "question": "כתוב שאילתה שמחזירה את הבסיסים ואת שמות המפקדים שלהם, כולל בסיסים ללא מפקד (LEFT JOIN).",
+    "expected_keywords": ["SELECT", "FROM", "LEFT JOIN", "ON"],
+    "difficulty": "medium",
+    "solution_example": "SELECT b.base_name, b.base_commander FROM AirBases b LEFT JOIN Squadrons s ON b.base_id = s.base_id;",
+    "points": 10
+  },
+  {
+    "id": 55,
+    "question": "כתוב שאילתה שמחזירה את שנת הייצור הממוצעת של כלי הטיס בכל טייסת מטבלת Aircraft.",
+    "expected_keywords": ["SELECT", "AVG", "FROM", "GROUP BY"],
+    "difficulty": "medium",
+    "solution_example": "SELECT squadron_id, AVG(manufacture_year) as avg_year FROM Aircraft GROUP BY squadron_id;",
+    "points": 10
+  },
+  {
+    "id": 56,
+    "question": "כתוב שאילתה שמחזירה את הטייסים הצעירים ביותר (גיל מתחת ל-30) עם יותר מ-1000 שעות טיסה.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE", "AND"],
+    "difficulty": "easy",
+    "solution_example": "SELECT pilot_name, age, flight_hours FROM Pilots WHERE age < 30 AND flight_hours > 1000;",
+    "points": 5
+  },
+  {
+    "id": 57,
+    "question": "כתוב שאילתה שמחזירה את סך הצריכה של דלק לכל סוג משימה מטבלת Missions.",
+    "expected_keywords": ["SELECT", "SUM", "FROM", "GROUP BY"],
+    "difficulty": "medium",
+    "solution_example": "SELECT mission_type, SUM(fuel_consumption) as total_fuel FROM Missions GROUP BY mission_type;",
+    "points": 10
+  },
+  {
+    "id": 58,
+    "question": "כתוב ביטוי אלגברה יחסית שמחבר את הטבלאות Pilots ו-AirBases על בסיס base_id ומחזיר רק טייסים מבסיסים בצפון.",
+    "expected_keywords": ["⋈", "σ", "Pilots", "AirBases", "צפון"],
+    "difficulty": "hard",
+    "solution_example": "σ_location='צפון'(Pilots ⋈_Pilots.base_id=AirBases.base_id AirBases)",
+    "points": 15
+  },
+  {
+    "id": 59,
+    "question": "כתוב שאילתה שמחזירה את כמות כלי הנשק בכל בסיס, רק עבור בסיסים שיש בהם יותר מ-50 יחידות נשק.",
+    "expected_keywords": ["SELECT", "COUNT", "FROM", "GROUP BY", "HAVING"],
+    "difficulty": "hard",
+    "solution_example": "SELECT storage_base_id, COUNT(*) as weapon_count FROM Weapons GROUP BY storage_base_id HAVING COUNT(*) > 50;",
+    "points": 15
+  },
+  {
+    "id": 60,
+    "question": "כתוב שאילתה שמחזירה את כלי הטיס שעלות התפעול שלהם גבוהה מהעלות הממוצעת של כל כלי הטיס.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE", "AVG", "subquery"],
+    "difficulty": "hard",
+    "solution_example": "SELECT tail_number, cost_per_hour FROM Aircraft WHERE cost_per_hour > (SELECT AVG(cost_per_hour) FROM Aircraft);",
+    "points": 15
+  },
+  {
+    "id": 61,
+    "question": "כתוב ביטוי אלגברה יחסית להצגת הפרש (Difference) בין כל הטייסות לבין הטייסות מסוג 'אימון'.",
+    "expected_keywords": ["−", "σ", "Squadrons", "mission_type"],
+    "difficulty": "hard",
+    "solution_example": "Squadrons − σ_mission_type='אימון'(Squadrons)",
+    "points": 15
+  },
+  {
+    "id": 62,
+    "question": "כתוב שאילתה שמחזירה את שמות הטייסות שיש בהן גם טייסים וגם כלי טיס (באמצעות EXISTS).",
+    "expected_keywords": ["SELECT", "DISTINCT", "FROM", "WHERE", "EXISTS"],
+    "difficulty": "hard",
+    "solution_example": "SELECT DISTINCT s.squadron_name FROM Squadrons s WHERE EXISTS (SELECT 1 FROM Pilots p WHERE p.squadron_id = s.squadron_id) AND EXISTS (SELECT 1 FROM Aircraft a WHERE a.squadron_id = s.squadron_id);",
+    "points": 15
+  },
+  {
+    "id": 63,
+    "question": "כתוב שאילתה שמחזירה את המשימות שבוצעו ב-3 החודשים האחרונים מטבלת Missions.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE", "DATE"],
+    "difficulty": "medium",
+    "solution_example": "SELECT mission_name, start_date FROM Missions WHERE start_date >= DATE_SUB(NOW(), INTERVAL 3 MONTH);",
+    "points": 10
+  },
+  {
+    "id": 64,
+    "question": "כתוב שאילתה שמחזירה את הטייסים עם הדרגה הגבוהה ביותר (סא\"ל) מטבלת Pilots.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "easy",
+    "solution_example": "SELECT pilot_name FROM Pilots WHERE rank = 'סא\"ל';",
+    "points": 5
+  },
+  {
+    "id": 65,
+    "question": "כתוב שאילתה שמחזירה את יחס העלות לטווח של כל כלי נשק מטבלת Weapons.",
+    "expected_keywords": ["SELECT", "FROM", "/"],
+    "difficulty": "medium",
+    "solution_example": "SELECT weapon_name, (cost_per_unit / range_km) as cost_per_km FROM Weapons WHERE range_km > 0;",
+    "points": 10
+  },
+  {
+    "id": 66,
+    "question": "כתוב שאילתה שמחזירה את כלי הטיס שנמצאים במצב 'תחזוקה' או 'בדיקות' מטבלת Aircraft.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE", "OR"],
+    "difficulty": "easy",
+    "solution_example": "SELECT tail_number, status FROM Aircraft WHERE status = 'תחזוקה' OR status = 'בדיקות';",
+    "points": 5
+  },
+  {
+    "id": 67,
+    "question": "כתוב שאילתה שמחזירה את הבסיסים שנוסדו בעשור הרביעי (1940-1949) מטבלת AirBases.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE", "BETWEEN"],
+    "difficulty": "easy",
+    "solution_example": "SELECT base_name, established_year FROM AirBases WHERE established_year BETWEEN 1940 AND 1949;",
+    "points": 5
+  },
+  {
+    "id": 68,
+    "question": "כתוב ביטוי אלגברה יחסית לבחירת כלי נשק מהטבלה Weapons שהמלאי שלהם מעל 100 יחידות.",
+    "expected_keywords": ["σ", "stock_quantity", "Weapons"],
+    "difficulty": "easy",
+    "solution_example": "σ_stock_quantity>100(Weapons)",
+    "points": 5
+  },
+  {
+    "id": 69,
+    "question": "כתוב שאילתה שמחזירה את המשימות שצרכו יותר מ-2000 ליטר דלק מטבלת Missions.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "easy",
+    "solution_example": "SELECT mission_name, fuel_consumption FROM Missions WHERE fuel_consumption > 2000;",
+    "points": 5
+  },
+  {
+    "id": 70,
+    "question": "כתוב שאילתה שמחזירה את הטייסים שמשכורתם בין 15,000 ל-25,000 ש\"ח מטבלת Pilots.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE", "BETWEEN"],
+    "difficulty": "easy",
+    "solution_example": "SELECT pilot_name, salary FROM Pilots WHERE salary BETWEEN 15000 AND 25000;",
+    "points": 5
+  },
+  {
+    "id": 71,
+    "question": "כתוב ביטוי אלגברה יחסית להטלת עמודות aircraft_type ו-max_speed מטבלת Aircraft.",
+    "expected_keywords": ["π", "aircraft_type", "max_speed", "Aircraft"],
+    "difficulty": "easy",
+    "solution_example": "π_aircraft_type,max_speed(Aircraft)",
+    "points": 5
+  },
+  {
+    "id": 72,
+    "question": "כתוב שאילתה שמחזירה את כלי הנשק שמיוצרים על ידי 'רפא\"ל' מטבלת Weapons.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "easy",
+    "solution_example": "SELECT weapon_name FROM Weapons WHERE supplier = 'רפא\"ל';",
+    "points": 5
+  },
+  {
+    "id": 73,
+    "question": "כתוב שאילתה שמחזירה את שמות הטייסות ממוינות בסדר יורד לפי מספר הטייסים הפעילים.",
+    "expected_keywords": ["SELECT", "FROM", "ORDER BY", "DESC"],
+    "difficulty": "easy",
+    "solution_example": "SELECT squadron_name, active_pilots FROM Squadrons ORDER BY active_pilots DESC;",
+    "points": 5
+  },
+  {
+    "id": 74,
+    "question": "כתוב שאילתה שמחזירה את הכמות הכוללת של כלי נשק במלאי לכל ספק מטבלת Weapons.",
+    "expected_keywords": ["SELECT", "SUM", "FROM", "GROUP BY"],
+    "difficulty": "medium",
+    "solution_example": "SELECT supplier, SUM(stock_quantity) as total_weapons FROM Weapons GROUP BY supplier;",
+    "points": 10
+  },
+  {
+    "id": 75,
+    "question": "כתוב שאילתה שמחזירה את מספר המשימות שבוצעו על ידי כל טייסת מטבלת Missions.",
+    "expected_keywords": ["SELECT", "COUNT", "FROM", "GROUP BY"],
+    "difficulty": "medium",
+    "solution_example": "SELECT squadron_id, COUNT(*) as mission_count FROM Missions GROUP BY squadron_id;",
+    "points": 10
+  },
+  {
+    "id": 76,
+    "question": "כתוב שאילתה שמחזירה את שמות הטייסים ושמות הבסיסים שלהם מטבלאות Pilots ו-AirBases.",
+    "expected_keywords": ["SELECT", "FROM", "JOIN", "ON"],
+    "difficulty": "medium",
+    "solution_example": "SELECT p.pilot_name, b.base_name FROM Pilots p JOIN AirBases b ON p.base_id = b.base_id;",
+    "points": 10
+  },
+  {
+    "id": 77,
+    "question": "כתוב שאילתה שמחזירה את הטווח הממוצע של כלי הנשק לכל סוג מטבלת Weapons.",
+    "expected_keywords": ["SELECT", "AVG", "FROM", "GROUP BY"],
+    "difficulty": "medium",
+    "solution_example": "SELECT weapon_type, AVG(range_km) as avg_range FROM Weapons GROUP BY weapon_type;",
+    "points": 10
+  },
+  {
+    "id": 78,
+    "question": "כתוב שאילתה שמחזירה את כלי הטיס ושמות הטייסים שטסו בהם במשימות, כולל כלי טיס שלא טסו.",
+    "expected_keywords": ["SELECT", "FROM", "LEFT JOIN", "ON"],
+    "difficulty": "medium",
+    "solution_example": "SELECT a.tail_number, p.pilot_name FROM Aircraft a LEFT JOIN Missions m ON a.aircraft_id = m.aircraft_id LEFT JOIN Pilots p ON m.pilot_id = p.pilot_id;",
+    "points": 10
+  },
+  {
+    "id": 79,
+    "question": "כתוב ביטוי אלגברה יחסית לאיחוד (Union) של בסיסים במרכז ובסיסים בדרום.",
+    "expected_keywords": ["∪", "σ", "AirBases", "location"],
+    "difficulty": "medium",
+    "solution_example": "σ_location='מרכז'(AirBases) ∪ σ_location='דרום'(AirBases)",
+    "points": 10
+  },
+  {
+    "id": 80,
+    "question": "כתוב שאילתה שמחזירה את שעות הטיסה הכוללות של כל כלי טיס בכל טייסת מטבלת Aircraft.",
+    "expected_keywords": ["SELECT", "SUM", "FROM", "GROUP BY"],
+    "difficulty": "medium",
+    "solution_example": "SELECT squadron_id, SUM(flight_hours_total) as total_hours FROM Aircraft GROUP BY squadron_id;",
+    "points": 10
+  },
+  {
+    "id": 81,
+    "question": "כתוב שאילתה שמחזירה את הטייסות שמספר כלי הטיס שלהן גדול ממספר הטייסים הפעילים שלהן.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE"],
+    "difficulty": "medium",
+    "solution_example": "SELECT squadron_name FROM Squadrons WHERE aircraft_count > active_pilots;",
+    "points": 10
+  },
+  {
+    "id": 82,
+    "question": "כתוב שאילתה שמחזירה את משך המשימה הארוך ביותר והקצר ביותר מטבלת Missions.",
+    "expected_keywords": ["SELECT", "MIN", "MAX", "FROM"],
+    "difficulty": "medium",
+    "solution_example": "SELECT MIN(flight_duration_hours) as shortest, MAX(flight_duration_hours) as longest FROM Missions;",
+    "points": 10
+  },
+  {
+    "id": 83,
+    "question": "כתוב שאילתה שמחזירה את הבסיסים שיש בהם יותר מ-2 טייסות (באמצעות HAVING).",
+    "expected_keywords": ["SELECT", "COUNT", "FROM", "GROUP BY", "HAVING"],
+    "difficulty": "hard",
+    "solution_example": "SELECT base_id, COUNT(*) as squadron_count FROM Squadrons GROUP BY base_id HAVING COUNT(*) > 2;",
+    "points": 15
+  },
+  {
+    "id": 84,
+    "question": "כתוב שאילתה שמחזירה את כלי הנשק שהמלאי שלהם נמוך מהמלאי הממוצע של כל כלי הנשק.",
+    "expected_keywords": ["SELECT", "FROM", "WHERE", "AVG", "subquery"],
+    "difficulty": "hard",
+    "solution_example": "SELECT weapon_name, stock_quantity FROM Weapons WHERE stock_quantity < (SELECT AVG(stock_quantity) FROM Weapons);",
+    "points": 15
+  },
+  {
+    "id": 85,
+    "question": "כתוב ביטוי אלגברה יחסית שמחבר את הטבלאות Weapons ו-AirBases על בסיס storage_base_id ומחזיר רק נשק מבסיסים ברמת ביטחון מעל 9.",
+    "expected_keywords": ["⋈", "σ", "Weapons", "AirBases", "security_level"],
+    "difficulty": "hard",
+    "solution_example": "σ_security_level>9(Weapons ⋈_Weapons.storage_base_id=AirBases.base_id AirBases)",
+    "points": 15
+  },
+  {
+    "id": 86,
+    "question": "כתוב שאילתה שמחזירה את שמות הטייסים, הטייסות והמשימות שלהם באמצעות JOIN משולש.",
+    "expected_keywords": ["SELECT", "FROM", "JOIN", "ON"],
+    "difficulty": "hard",
+    "solution_example": "SELECT p.pilot_name, s.squadron_name, m.mission_name FROM Pilots p JOIN Squadrons s ON p.squadron_id = s.squadron_id JOIN Missions m ON p.pilot_id = m.pilot_id;",
+    "points": 15
+  },
+  {
+    "id": 87,
+    "question": "כתוב ביטוי אלגברה יחסית להצגת הפרש (Difference) בין כל הטייסים לבין הטייסים ברמת סיווג מתחת ל-7.",
+    "expected_keywords": ["−", "σ", "Pilots", "security_clearance"],
+    "difficulty": "hard",
+    "solution_example": "Pilots − σ_security_clearance<7(Pilots)",
+    "points": 15
+  },
+  {
+    "id": 88,
+    "question": "כתוב שאילתה שמחזירה את שמות הבסיסים שיש בהם גם טייסות קרב וגם טייסות ביון (באמצעות EXISTS).",
+    "expected_keywords": ["SELECT", "DISTINCT", "FROM", "WHERE", "EXISTS"],
+    "difficulty": "hard",
+    "solution_example": "SELECT DISTINCT b.base_name FROM AirBases b WHERE EXISTS (SELECT 1 FROM Squadrons s WHERE s.base_id = b.base_id AND s.mission_type = 'קרב') AND EXISTS (SELECT 1 FROM Squadrons s WHERE s.base_id = b.base_id AND s.mission_type = 'ביון');",
+    "points": 15
+  },
+  {
+    "id": 89,
+    "question": "כתוב שאילתה שמחזירה את פירוט העלות השנתית של כל טייס (שם, משכורת שנתית, עלות טיסה שנתית), בהנחה של 150 שעות טיסה בשנה.",
+    "expected_keywords": ["SELECT", "FROM", "JOIN", "*"],
+    "difficulty": "hard",
+    "solution_example": "SELECT p.pilot_name, (p.salary * 12) as annual_salary, (a.cost_per_hour * 150) as annual_flight_cost FROM Pilots p JOIN Aircraft a ON p.squadron_id = a.squadron_id;",
+    "points": 15
+  },
+  {
+    "id": 90,
+    "question": "כתוב שאילתה שמחזירה את הטייסת הכי יעילה - זו עם היחס הגבוה ביותר של משימות מוצלחות לכמות הטייסים.",
+    "expected_keywords": ["SELECT", "FROM", "JOIN", "GROUP BY", "ORDER BY", "LIMIT"],
+    "difficulty": "hard",
+    "solution_example": "SELECT s.squadron_name, (COUNT(m.mission_id) / s.active_pilots) as efficiency FROM Squadrons s JOIN Missions m ON s.squadron_id = m.squadron_id WHERE m.mission_status = 'הושלמה' GROUP BY s.squadron_id ORDER BY efficiency DESC LIMIT 1;",
+    "points": 15
+  }
+] 
