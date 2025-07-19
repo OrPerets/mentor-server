@@ -7,7 +7,8 @@ const Streamer = require('ai');
 
 const app = express();
 app.use(cors());
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
 
 const port = 5555;
 
@@ -66,7 +67,16 @@ app.post("/updatePassword", (req, res) => {
   )
   let email = req.body.email;
   let password = req.body.password;
-  DB.updatePassword(email, password).then(res.sendStatus(200))
+  
+  // Convert single email to array format expected by DB function
+  DB.updatePassword([email], password)
+    .then(() => {
+      res.sendStatus(200);
+    })
+    .catch((error) => {
+      console.error('Error updating password:', error);
+      res.status(500).json({ error: 'Failed to update password' });
+    });
 })
 
 app.post("/updatePasswordToMany", (req, res) => {
@@ -300,36 +310,48 @@ app.get("/exam/:examId/question/:questionIndex", async (req, res) => {
     if (currentIndex === 0) {
       // First question is always easy
       difficulty = 'easy';
-    } else if (currentIndex === 12) {
-      // 13th question (index 12) is always algebra
-      difficulty = 'algebra';
+      console.log(`🎯 Question ${currentIndex + 1}: FIXED easy`);
     } else {
-      // Questions 2-12 (indices 1-11) are shuffled: 5 easy, 3 medium, 3 hard
-      // Create shuffled pattern for middle questions
+      // Questions 2-13 (indices 1-12) are shuffled: 5 easy, 3 medium, 3 hard, 1 algebra
+      // Create shuffled pattern for middle questions (12 questions total)
       const middleQuestions = [
         ...Array(5).fill('easy'),
         ...Array(3).fill('medium'),
-        ...Array(3).fill('hard')
+        ...Array(3).fill('hard'),
+        ...Array(1).fill('algebra')
       ];
+      
+      console.log(`🔄 Original middle questions array:`, middleQuestions);
       
       // Use exam ID as seed for consistent shuffling per exam
       const examSeed = examId.toString();
-      let hash = 0;
+      let seed = 0;
       for (let i = 0; i < examSeed.length; i++) {
-        hash = ((hash << 5) - hash) + examSeed.charCodeAt(i);
-        hash = hash & hash; // Convert to 32bit integer
+        seed = ((seed << 5) - seed) + examSeed.charCodeAt(i);
+        seed = seed & seed; // Convert to 32bit integer
       }
       
-      // Fisher-Yates shuffle with seeded random
+      console.log(`🌱 Exam ID: ${examId}, Seed: ${seed}`);
+      
+      // Simple seeded random number generator
+      function seededRandom() {
+        seed = (seed * 9301 + 49297) % 233280;
+        return seed / 233280;
+      }
+      
+      // Fisher-Yates shuffle with proper seeded random
       const shuffled = [...middleQuestions];
       for (let i = shuffled.length - 1; i > 0; i--) {
-        hash = (hash * 9301 + 49297) % 233280; // Linear congruential generator
-        const j = Math.floor((hash / 233280) * (i + 1));
+        const j = Math.floor(seededRandom() * (i + 1));
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
       }
       
-      // Map current index (1-11) to shuffled array (0-10)
-      difficulty = shuffled[currentIndex - 1];
+      console.log(`🎲 Shuffled middle questions:`, shuffled);
+      
+      // Map current index (1-12) to shuffled array (0-11)
+      const arrayIndex = currentIndex - 1;
+      difficulty = shuffled[arrayIndex];
+      console.log(`🎯 Question ${currentIndex + 1} (array index ${arrayIndex}): ${difficulty}`);
     }
 
     // Get question based on fixed difficulty, preventing duplicates
@@ -349,7 +371,10 @@ app.get("/exam/:examId/question/:questionIndex", async (req, res) => {
 
 app.post("/exam/:examId/answer", (req, res) => {
   const examId = req.params.examId;
-  const { questionIndex, questionId, questionText, difficulty, studentAnswer, correctAnswer, isCorrect, timeSpent, startTime, endTime, typingSpeed, typingEvents } = req.body;
+  const { 
+    questionIndex, questionId, questionText, difficulty, studentAnswer, correctAnswer, 
+    isCorrect, timeSpent, startTime, endTime, typingSpeed, typingEvents, comprehensiveMetrics 
+  } = req.body;
   
   const answerData = {
     questionId,
@@ -361,6 +386,7 @@ app.post("/exam/:examId/answer", (req, res) => {
     timeSpent,
     typingSpeed: typingSpeed || 0,
     typingEvents: typingEvents || [],
+    comprehensiveMetrics: comprehensiveMetrics || null, // Add comprehensive metrics
     startTime: new Date(startTime),
     endTime: new Date(endTime)
   };
@@ -376,7 +402,10 @@ app.post("/exam/:examId/answer", (req, res) => {
 // New auto-save endpoint
 app.post("/exam/:examId/auto-save", (req, res) => {
   const examId = req.params.examId;
-  const { questionIndex, questionId, questionText, difficulty, studentAnswer, timeSpent, startTime, endTime, typingSpeed, typingEvents, isAutoSave } = req.body;
+  const { 
+    questionIndex, questionId, questionText, difficulty, studentAnswer, timeSpent, 
+    startTime, endTime, typingSpeed, typingEvents, isAutoSave, comprehensiveMetrics 
+  } = req.body;
   
   const answerData = {
     questionId,
@@ -388,6 +417,7 @@ app.post("/exam/:examId/auto-save", (req, res) => {
     timeSpent,
     typingSpeed: typingSpeed || 0,
     typingEvents: typingEvents || [],
+    comprehensiveMetrics: comprehensiveMetrics || null, // Add comprehensive metrics
     startTime: new Date(startTime),
     endTime: new Date(endTime),
     isAutoSave: true
@@ -448,6 +478,59 @@ app.get("/admin/exam-sessions", (req, res) => {
     });
 });
 
+// FinalExams endpoints
+app.get("/admin/final-exams", async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100); // Max 100 per page
+    const skip = parseInt(req.query.skip) || 0;
+    
+    const [finalExams, totalCount] = await Promise.all([
+      DB.getAllFinalExams(limit, skip),
+      DB.getFinalExamsCount()
+    ]);
+    
+    res.json({
+      exams: finalExams,
+      pagination: {
+        total: totalCount,
+        limit,
+        skip,
+        hasMore: skip + limit < totalCount
+      }
+    });
+  } catch (error) {
+    console.error('Error getting final exams:', error);
+    res.status(500).json({ error: 'Failed to get final exams' });
+  }
+});
+
+app.get("/admin/final-exam/:examId/for-grading", (req, res) => {
+  const examId = req.params.examId;
+  
+  DB.getFinalExamForGrading(examId)
+    .then(examData => {
+      if (!examData) {
+        return res.status(404).json({ error: 'Final exam not found' });
+      }
+      res.json(examData);
+    })
+    .catch(error => {
+      console.error('Error getting final exam for grading:', error);
+      res.status(500).json({ error: 'Failed to get final exam for grading' });
+    });
+});
+
+// Initialize FinalExams collection
+app.post("/admin/initialize-final-exams", async (req, res) => {
+  try {
+    const result = await DB.initializeFinalExamsCollection();
+    res.json(result);
+  } catch (error) {
+    console.error('Error initializing final exams collection:', error);
+    res.status(500).json({ error: 'Failed to initialize final exams collection' });
+  }
+});
+
 app.get("/admin/exam/:examId/for-grading", (req, res) => {
   const examId = req.params.examId;
   
@@ -499,6 +582,34 @@ app.get("/admin/exam-grades", (req, res) => {
     .catch(error => {
       console.error('Error getting exam grades:', error);
       res.status(500).json({ error: 'Failed to get exam grades' });
+    });
+});
+
+// Final Exam Grade Endpoints
+app.post("/admin/final-exam/:examId/grade", (req, res) => {
+  const examId = req.params.examId;
+  const gradeData = req.body;
+  
+  DB.saveExamGrade(examId, gradeData)
+    .then(result => {
+      res.json(result);
+    })
+    .catch(error => {
+      console.error('Error saving final exam grade:', error);
+      res.status(500).json({ error: 'Failed to save final exam grade' });
+    });
+});
+
+app.get("/admin/final-exam/:examId/grade", (req, res) => {
+  const examId = req.params.examId;
+  
+  DB.getExamGrade(examId)
+    .then(grade => {
+      res.json(grade);
+    })
+    .catch(error => {
+      console.error('Error getting final exam grade:', error);
+      res.status(500).json({ error: 'Failed to get final exam grade' });
     });
 });
 
@@ -929,6 +1040,382 @@ app.delete("/admin/extraTime/:studentId", async (req, res) => {
     res.status(500).json({ error: 'Failed to delete extra time record' });
   }
 });
+
+// Import analytics helpers
+const {
+  generateAnalyticsReport,
+  analyzeTypingBehavior,
+  detectAnomalies
+} = require('./metricsAnalytics');
+
+// Test endpoint for analytics
+app.get("/admin/research/test", (req, res) => {
+  res.json({ 
+    status: 'success', 
+    message: 'Analytics endpoints are working',
+    timestamp: new Date()
+  });
+});
+
+// Admin research analytics endpoints
+app.get("/admin/research/analytics", async (req, res) => {
+  try {
+    console.log('📊 Starting analytics report generation...');
+    
+    // Get all exam answers with comprehensive metrics
+    const examAnswers = await DB.getAllExamAnswers();
+    console.log(`📊 Found ${examAnswers.length} exam answers`);
+    
+    if (examAnswers.length === 0) {
+      console.log('📊 No exam data found, returning empty report');
+      return res.json({
+        summary: {
+          totalAnswers: 0,
+          totalStudents: 0,
+          analysisTimestamp: new Date(),
+          metricsAvailable: 0
+        },
+        behaviorAnalysis: {
+          overallStats: {},
+          anomalies: [],
+          researchInsights: { correlations: {}, patterns: {}, recommendations: [] }
+        },
+        performanceAnalysis: {
+          overall: { accuracy: 0, averageTime: 0 },
+          byDifficulty: {}
+        },
+        integrityAnalysis: {
+          suspiciousActivities: {},
+          attentionMetrics: {}
+        },
+        recommendations: []
+      });
+    }
+    
+    // Generate comprehensive analytics report
+    console.log('📊 Generating analytics report...');
+    const analyticsReport = generateAnalyticsReport(examAnswers);
+    console.log('📊 Analytics report generated successfully');
+    
+    res.json(analyticsReport);
+  } catch (error) {
+    console.error('❌ Error generating analytics report:', error);
+    console.error('❌ Error stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Failed to generate analytics report',
+      details: error.message 
+    });
+  }
+});
+
+// Get analytics for specific exam session
+app.get("/admin/research/analytics/:examId", async (req, res) => {
+  try {
+    const { examId } = req.params;
+    
+    // Get answers for specific exam
+    const examAnswers = await DB.getExamAnswers(examId);
+    
+    if (!examAnswers || examAnswers.length === 0) {
+      return res.status(404).json({ error: 'No exam data found' });
+    }
+    
+    // Generate analytics for this specific exam
+    const studentReport = generateAnalyticsReport(examAnswers);
+    
+    res.json(studentReport);
+  } catch (error) {
+    console.error('Error generating student analytics:', error);
+    res.status(500).json({ error: 'Failed to generate student analytics' });
+  }
+});
+
+// Export research data as CSV
+app.get("/admin/research/export/csv", async (req, res) => {
+  try {
+    const examAnswers = await DB.getAllExamAnswers();
+    const csvData = generateCSVExport(examAnswers);
+    
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="exam-research-data.csv"');
+    res.send(csvData);
+  } catch (error) {
+    console.error('Error exporting CSV:', error);
+    res.status(500).json({ error: 'Failed to export CSV data' });
+  }
+});
+
+// Get anomaly detection results
+app.get("/admin/research/anomalies", async (req, res) => {
+  try {
+    const examAnswers = await DB.getAllExamAnswers();
+    const allMetrics = examAnswers
+      .filter(answer => answer.behaviorAnalytics)
+      .map(answer => answer.behaviorAnalytics);
+    
+    const anomalies = detectAnomalies(allMetrics, examAnswers);
+    
+    res.json({
+      totalAnomalies: anomalies.length,
+      highSeverity: anomalies.filter(a => a.severity === 'high').length,
+      mediumSeverity: anomalies.filter(a => a.severity === 'medium').length,
+      byType: groupAnomaliesByType(anomalies),
+      details: anomalies
+    });
+  } catch (error) {
+    console.error('Error detecting anomalies:', error);
+    res.status(500).json({ error: 'Failed to detect anomalies' });
+  }
+});
+
+// Helper function to generate CSV export
+function generateCSVExport(examAnswers) {
+  const headers = [
+    'examId', 'questionIndex', 'difficulty', 'isCorrect', 'timeSpent',
+    'wordsPerMinute', 'rhythmConsistency', 'confidenceScore', 'focusScore',
+    'timeToFirstKeystroke', 'pauseCount', 'totalBackspaces', 'editingEfficiency',
+    'tabSwitches', 'sidebarToggleCount', 'modalOpenCount', 'suspiciousTypingSpeed',
+    'pasteFromExternal', 'devToolsOpened', 'submittedAt'
+  ];
+  
+  let csvContent = headers.join(',') + '\n';
+  
+  examAnswers.forEach(answer => {
+    const metrics = answer.behaviorAnalytics || {};
+    const row = [
+      answer.examId,
+      answer.questionIndex,
+      answer.difficulty,
+      answer.isCorrect,
+      answer.timeSpent,
+      metrics.wordsPerMinute || 0,
+      metrics.rhythmConsistency || 0,
+      metrics.confidenceScore || 0,
+      metrics.focusScore || 0,
+      metrics.timeToFirstKeystroke || 0,
+      metrics.pauseCount || 0,
+      metrics.totalBackspaces || 0,
+      metrics.editingEfficiency || 0,
+      metrics.tabSwitches || 0,
+      metrics.sidebarToggleCount || 0,
+      metrics.modalOpenCount || 0,
+      metrics.suspiciousTypingSpeed || false,
+      metrics.pasteFromExternal || false,
+      metrics.devToolsOpened || false,
+      answer.submittedAt
+    ];
+    
+    csvContent += row.map(field => 
+      typeof field === 'string' ? `"${field.replace(/"/g, '""')}"` : field
+    ).join(',') + '\n';
+  });
+  
+  return csvContent;
+}
+
+// Helper function to group anomalies by type
+function groupAnomaliesByType(anomalies) {
+  const grouped = {};
+  anomalies.forEach(anomaly => {
+    if (!grouped[anomaly.type]) {
+      grouped[anomaly.type] = 0;
+    }
+    grouped[anomaly.type]++;
+  });
+  return grouped;
+}
+
+// getAllExamAnswers function moved to db.js
+
+// Grade by Question API endpoints
+app.get("/api/admin/questions-with-answers", async (req, res) => {
+  try {
+    // Use new FinalExams-based function
+    const questions = await DB.getQuestionsWithAnswersFromFinalExams();
+    res.json(questions);
+  } catch (error) {
+    console.error('Error getting questions with answers:', error);
+    res.status(500).json({ error: 'Failed to get questions with answers' });
+  }
+});
+
+app.get("/api/admin/question/:questionId/answers", async (req, res) => {
+  try {
+    const questionId = req.params.questionId;
+    // Use new FinalExams-based function
+    const questionData = await DB.getQuestionAnswersFromFinalExams(questionId);
+    
+    if (!questionData) {
+      return res.status(404).json({ error: 'Question not found' });
+    }
+    
+    res.json(questionData);
+  } catch (error) {
+    console.error('Error getting question answers:', error);
+    res.status(500).json({ error: 'Failed to get question answers' });
+  }
+});
+
+app.post("/api/admin/grade-answer", async (req, res) => {
+  try {
+    const { examId, questionIndex, grade, feedback } = req.body;
+    
+    if (!examId || questionIndex === undefined || grade === undefined) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // Use new FinalExams-based grading function
+    const result = await DB.updateAnswerGradeInFinalExams(examId, questionIndex, grade, feedback);
+    res.json({ success: true, examGrade: result });
+  } catch (error) {
+    console.error('Error grading answer:', error);
+    res.status(500).json({ error: 'Failed to grade answer' });
+  }
+});
+
+// Debug endpoint to check FinalExams structure
+app.get("/api/admin/debug/final-exams-structure", async (req, res) => {
+  try {
+    const db = await DB.getDatabase();
+    
+    // Get a sample final exam
+    const sampleExam = await db.collection("finalExams").findOne({});
+    
+    if (!sampleExam) {
+      return res.json({ error: "No final exams found" });
+    }
+    
+    // Get count of final exams with mergedAnswers
+    const withMergedAnswers = await db.collection("finalExams").countDocuments({
+      mergedAnswers: { $exists: true, $ne: [] }
+    });
+    
+    const totalExams = await db.collection("finalExams").countDocuments({});
+    
+    res.json({
+      totalFinalExams: totalExams,
+      examsWithMergedAnswers: withMergedAnswers,
+      sampleExamStructure: {
+        _id: sampleExam._id,
+        studentEmail: sampleExam.studentEmail,
+        hasMergedAnswers: !!sampleExam.mergedAnswers,
+        mergedAnswersCount: sampleExam.mergedAnswers ? sampleExam.mergedAnswers.length : 0,
+        sampleMergedAnswer: sampleExam.mergedAnswers ? sampleExam.mergedAnswers[0] : null,
+        hasReview: !!sampleExam.review,
+        reviewStructure: sampleExam.review ? Object.keys(sampleExam.review) : null
+      }
+    });
+  } catch (error) {
+    console.error('Error debugging final exams:', error);
+    res.status(500).json({ error: 'Failed to debug final exams' });
+  }
+});
+
+// Simple endpoint to check merged answers count
+app.get("/api/admin/debug/merged-answers-count", async (req, res) => {
+  try {
+    const db = await DB.getDatabase();
+    
+    const totalExams = await db.collection("finalExams").countDocuments({});
+    const examsWithMergedAnswers = await db.collection("finalExams").countDocuments({
+      mergedAnswers: { $exists: true, $ne: [] }
+    });
+    
+    // Get sample of merged answers to see structure
+    const sampleExams = await db.collection("finalExams").find({ 
+      mergedAnswers: { $exists: true, $ne: [] } 
+    }).limit(2).toArray();
+    
+    const sampleAnswerStructure = sampleExams.length > 0 && sampleExams[0].mergedAnswers 
+      ? Object.keys(sampleExams[0].mergedAnswers[0]) 
+      : [];
+    
+    res.json({
+      totalExams,
+      examsWithMergedAnswers,
+      sampleAnswerStructure,
+      sampleAnswer: sampleExams.length > 0 ? sampleExams[0].mergedAnswers[0] : null
+    });
+  } catch (error) {
+    console.error('Error checking merged answers:', error);
+    res.status(500).json({ error: 'Failed to check merged answers' });
+  }
+});
+
+// Debug endpoint to check specific question answers
+app.get("/api/admin/debug/question/:questionId/final-answers", async (req, res) => {
+  try {
+    const db = await DB.getDatabase();
+    const questionId = req.params.questionId;
+    
+    // Check both string and number questionId
+    const pipeline = [
+      { $match: { mergedAnswers: { $exists: true, $ne: [] } } },
+      { $unwind: "$mergedAnswers" },
+      { 
+        $match: { 
+          $or: [
+            { "mergedAnswers.questionId": questionId.toString() },
+            { "mergedAnswers.questionId": parseInt(questionId) }
+          ]
+        }
+      },
+      { $limit: 5 },
+      { 
+        $project: {
+          studentEmail: 1,
+          "mergedAnswers.questionId": 1,
+          "mergedAnswers.questionIndex": 1,
+          "mergedAnswers.studentAnswer": 1,
+          "mergedAnswers.isCorrect": 1
+        }
+      }
+    ];
+    
+    const results = await db.collection("finalExams").aggregate(pipeline).toArray();
+    
+    res.json({
+      questionId: questionId,
+      questionIdAsNumber: parseInt(questionId),
+      foundAnswers: results.length,
+      sampleResults: results
+    });
+  } catch (error) {
+    console.error('Error debugging question answers:', error);
+    res.status(500).json({ error: 'Failed to debug question answers' });
+  }
+});
+
+// Debug endpoint to check exam answers data
+app.get("/api/admin/debug/exam-answers", async (req, res) => {
+  try {
+    // Use existing DB functions instead of direct database access
+    const answers = await DB.getAllExamAnswers();
+    const questions = await DB.getAllQuestions();
+    
+    res.json({ 
+      sampleAnswers: answers.slice(0, 20).map(a => ({
+        examId: a.examId,
+        questionId: a.questionId,
+        questionIdType: typeof a.questionId,
+        questionIndex: a.questionIndex,
+        submittedAt: a.submittedAt
+      })),
+      sampleQuestions: questions.slice(0, 10).map(q => ({
+        id: q.id,
+        idType: typeof q.id,
+        question: q.question ? q.question.substring(0, 100) + '...' : 'No question text',
+        approved: q.approved
+      })),
+      answerCount: answers.length,
+      questionCount: questions.length
+    });
+  } catch (error) {
+    console.error('Error getting debug data:', error);
+    res.status(500).json({ error: 'Failed to get debug data', details: error.message });
+  }
+});
+
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
