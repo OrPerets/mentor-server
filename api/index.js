@@ -1273,6 +1273,109 @@ app.post("/api/admin/grade-answer", async (req, res) => {
   }
 });
 
+// Comments Bank API endpoints
+app.post("/api/admin/comment-bank", async (req, res) => {
+  try {
+    const { questionId, questionText, difficulty, score, maxScore, feedback, gradedBy } = req.body;
+    
+    if (!questionId || !questionText || !feedback) {
+      return res.status(400).json({ error: 'Missing required fields: questionId, questionText, feedback' });
+    }
+    
+    const result = await DB.saveCommentBankEntry(questionId, questionText, difficulty, score, maxScore, feedback, gradedBy);
+    res.json({ success: true, comment: result });
+  } catch (error) {
+    console.error('Error saving comment to bank:', error);
+    res.status(500).json({ error: 'Failed to save comment to bank' });
+  }
+});
+
+app.get("/api/admin/comment-bank", async (req, res) => {
+  try {
+    const { questionId, difficulty, searchTerm, limit } = req.query;
+    
+    const comments = await DB.getCommentBankEntries(
+      questionId ? parseInt(questionId) : null,
+      difficulty || null,
+      searchTerm || null,
+      limit ? parseInt(limit) : 50
+    );
+    
+    res.json({ success: true, comments });
+  } catch (error) {
+    console.error('Error fetching comments from bank:', error);
+    res.status(500).json({ error: 'Failed to fetch comments from bank' });
+  }
+});
+
+app.post("/api/admin/comment-bank/:commentId/use", async (req, res) => {
+  try {
+    const { commentId } = req.params;
+    
+    const result = await DB.updateCommentBankUsage(commentId);
+    res.json({ success: true, result });
+  } catch (error) {
+    console.error('Error updating comment usage:', error);
+    res.status(500).json({ error: 'Failed to update comment usage' });
+  }
+});
+
+app.delete("/api/admin/comment-bank/:commentId", async (req, res) => {
+  try {
+    const { commentId } = req.params;
+    
+    const result = await DB.deleteCommentBankEntry(commentId);
+    res.json({ success: true, result });
+  } catch (error) {
+    console.error('Error deleting comment from bank:', error);
+    res.status(500).json({ error: 'Failed to delete comment from bank' });
+  }
+});
+
+app.put("/api/admin/comment-bank/:commentId", async (req, res) => {
+  try {
+    const { commentId } = req.params;
+    const updates = req.body;
+    
+    const result = await DB.updateCommentBankEntry(commentId, updates);
+    res.json({ success: true, result });
+  } catch (error) {
+    console.error('Error updating comment in bank:', error);
+    res.status(500).json({ error: 'Failed to update comment in bank' });
+  }
+});
+
+// Missing Correct Answers API endpoints
+app.get("/api/admin/check-missing-answers", async (req, res) => {
+  try {
+    const result = await DB.checkMissingCorrectAnswers();
+    res.json(result);
+  } catch (error) {
+    console.error('Error checking missing answers:', error);
+    res.status(500).json({ error: 'Failed to check missing answers' });
+  }
+});
+
+app.post("/api/admin/fix-missing-answers", async (req, res) => {
+  try {
+    const result = await DB.checkMissingCorrectAnswers();
+    res.json(result);
+  } catch (error) {
+    console.error('Error fixing missing answers:', error);
+    res.status(500).json({ error: 'Failed to fix missing answers' });
+  }
+});
+
+app.get("/api/admin/questions-answer-status", async (req, res) => {
+  try {
+    const result = await DB.getQuestionsCorrectAnswerStatus();
+    res.json({ success: true, questions: result });
+  } catch (error) {
+    console.error('Error getting questions answer status:', error);
+    res.status(500).json({ error: 'Failed to get questions answer status' });
+  }
+});
+
 // Debug endpoint to check FinalExams structure
 app.get("/api/admin/debug/final-exams-structure", async (req, res) => {
   try {

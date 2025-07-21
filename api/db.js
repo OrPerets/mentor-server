@@ -1201,21 +1201,23 @@ module.exports = {
             console.log(`Sample answer questionId format:`, typeof sampleExam.mergedAnswers[0].questionId, sampleExam.mergedAnswers[0].questionId);
         }
         
-        // More flexible aggregation pipeline
+        // Comprehensive aggregation pipeline that combines all matching strategies
         const finalExamsWithAnswers = await db.collection("finalExams").aggregate([
             // First, only match documents that have mergedAnswers
             { $match: { mergedAnswers: { $exists: true, $ne: [] } } },
             // Unwind the mergedAnswers array
             { $unwind: "$mergedAnswers" },
-            // Match the specific question - try multiple formats
+            // Match the specific question using all possible formats and strategies
             { 
                 $match: { 
                     $or: [
+                        // Primary matching strategies
                         { "mergedAnswers.questionId": questionId.toString() },
                         { "mergedAnswers.questionId": parseInt(questionId) },
                         { "mergedAnswers.questionId": questionId }, // In case it's already correct type
-                        // Also try matching on question number if questionId is actually the question number
-                        { "mergedAnswers.questionDetails.id": parseInt(questionId) }
+                        // Alternative matching strategies
+                        { "mergedAnswers.questionDetails.id": parseInt(questionId) },
+                        { "mergedAnswers.questionText": { $regex: new RegExp(question.question.substring(0, 50).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') } }
                     ]
                 }
             },
@@ -1239,43 +1241,6 @@ module.exports = {
         ]).toArray();
         
         console.log(`Found ${finalExamsWithAnswers.length} answers for question ${questionId}`);
-        
-        // If no results with the above query, let's try a different approach
-        if (finalExamsWithAnswers.length === 0) {
-            console.log('No answers found with standard query, trying alternative approach...');
-            
-            // Let's try to find answers by looking at the questionDetails
-            const alternativeResults = await db.collection("finalExams").aggregate([
-                { $match: { mergedAnswers: { $exists: true, $ne: [] } } },
-                { $unwind: "$mergedAnswers" },
-                { 
-                    $match: { 
-                        $or: [
-                            { "mergedAnswers.questionDetails.id": parseInt(questionId) },
-                            { "mergedAnswers.questionText": { $regex: new RegExp(question.question.substring(0, 50), 'i') } }
-                        ]
-                    }
-                },
-                { 
-                    $project: {
-                        _id: 1,
-                        studentEmail: 1,
-                        studentName: 1,
-                        studentId: 1,
-                        startTime: 1,
-                        endTime: 1,
-                        status: 1,
-                        answer: "$mergedAnswers",
-                        graded: 1,
-                        review: 1
-                    }
-                },
-                { $sort: { "answer.timestamp": -1 } }
-            ]).toArray();
-            
-            console.log(`Alternative approach found ${alternativeResults.length} answers`);
-            finalExamsWithAnswers.push(...alternativeResults);
-        }
         
         // Process answers and add grading information
         const answersWithDetails = finalExamsWithAnswers.map((examData) => {
@@ -1519,6 +1484,178 @@ module.exports = {
         }
         
         return examGrade;
+    },
+
+    // Comments Bank functions
+    saveCommentBankEntry: async (questionId, questionText, difficulty, score, maxScore, feedback, gradedBy = 'admin') => {
+        const db = await getDatabase();
+        
+        const commentEntry = {
+            questionId,
+            questionText,
+            difficulty,
+            score,
+            maxScore,
+            feedback,
+            gradedBy,
+            gradedAt: new Date(),
+            tags: [], // For future use - could extract keywords from questionText
+            usageCount: 0, // Track how many times this comment was reused
+            lastUsed: null
+        };
+        
+        const result = await db.collection("commentBank").insertOne(commentEntry);
+        return { commentId: result.insertedId, ...commentEntry };
+    },
+
+    getCommentBankEntries: async (questionId = null, difficulty = null, searchTerm = null, limit = 50) => {
+        const db = await getDatabase();
+        
+        let query = {};
+        
+        // Filter by question ID if provided
+        if (questionId) {
+            query.questionId = questionId;
+        }
+        
+        // Filter by difficulty if provided
+        if (difficulty) {
+            query.difficulty = difficulty;
+        }
+        
+        // Search in question text and feedback if search term provided
+        if (searchTerm) {
+            query.$or = [
+                { questionText: { $regex: searchTerm, $options: 'i' } },
+                { feedback: { $regex: searchTerm, $options: 'i' } }
+            ];
+        }
+        
+        const comments = await db.collection("commentBank")
+            .find(query)
+            .sort({ gradedAt: -1, usageCount: -1 }) // Sort by recent and frequently used
+            .limit(limit)
+            .toArray();
+        
+        return comments;
+    },
+
+    updateCommentBankUsage: async (commentId) => {
+        const db = await getDatabase();
+        const { ObjectId } = require('mongodb');
+        
+        const result = await db.collection("commentBank").updateOne(
+            { _id: new ObjectId(commentId) },
+            { 
+                $inc: { usageCount: 1 },
+                $set: { lastUsed: new Date() }
+            }
+        );
+        
+        return result;
+    },
+
+    deleteCommentBankEntry: async (commentId) => {
+        const db = await getDatabase();
+        const { ObjectId } = require('mongodb');
+        
+        const result = await db.collection("commentBank").deleteOne({ _id: new ObjectId(commentId) });
+        return result;
+    },
+
+    updateCommentBankEntry: async (commentId, updates) => {
+        const db = await getDatabase();
+        const { ObjectId } = require('mongodb');
+        
+        const result = await db.collection("commentBank").updateOne(
+            { _id: new ObjectId(commentId) },
+            { 
+                $set: { 
+                    ...updates,
+                    lastUpdated: new Date()
+                }
+            }
+        );
+        
+        return result;
+    },
+
+    // Function to check and fix missing correct answers
+    checkMissingCorrectAnswers: async () => {
+        const db = await getDatabase();
+        
+        // Get all questions from database
+        const questions = await db.collection("questions").find({}).toArray();
+        
+        // Find questions without solution_example
+        const questionsWithoutSolution = questions.filter(q => !q.solution_example || q.solution_example.trim() === '');
+        
+        if (questionsWithoutSolution.length === 0) {
+            return { 
+                status: 'success', 
+                message: 'All questions have correct answers',
+                totalQuestions: questions.length
+            };
+        }
+        
+        // Load exercises.json to get the solutions
+        const exercises = require('./exercises.json');
+        const exercisesMap = exercises.reduce((map, exercise) => {
+            map[exercise.id] = exercise;
+            return map;
+        }, {});
+        
+        let fixedCount = 0;
+        const missingAnswers = [];
+        
+        for (const question of questionsWithoutSolution) {
+            const exerciseData = exercisesMap[question.id];
+            
+            if (exerciseData && exerciseData.solution_example) {
+                // Update the question with the correct answer
+                await db.collection("questions").updateOne(
+                    { id: question.id },
+                    { 
+                        $set: { 
+                            solution_example: exerciseData.solution_example,
+                            expected_keywords: exerciseData.expected_keywords || [],
+                            lastUpdated: new Date()
+                        }
+                    }
+                );
+                fixedCount++;
+            } else {
+                missingAnswers.push({
+                    id: question.id,
+                    question: question.question,
+                    difficulty: question.difficulty
+                });
+            }
+        }
+        
+        return {
+            status: 'success',
+            message: `Fixed ${fixedCount} questions, ${missingAnswers.length} still missing answers`,
+            totalQuestions: questions.length,
+            questionsWithoutSolution: questionsWithoutSolution.length,
+            fixedCount,
+            missingAnswers
+        };
+    },
+
+    // Function to get all questions with their correct answer status
+    getQuestionsCorrectAnswerStatus: async () => {
+        const db = await getDatabase();
+        
+        const questions = await db.collection("questions").find({}).sort({ id: 1 }).toArray();
+        
+        return questions.map(q => ({
+            id: q.id,
+            question: q.question?.substring(0, 100) + '...' || 'No question text',
+            difficulty: q.difficulty,
+            hasCorrectAnswer: !!(q.solution_example && q.solution_example.trim() !== ''),
+            approved: q.approved || false
+        }));
     }
 };
 
