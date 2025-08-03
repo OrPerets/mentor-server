@@ -1804,7 +1804,7 @@ app.get('/admin/cheat-detection', async (req, res) => {
   
   try {
     // Connect to DB
-    const db = await DB.connectToDatabase();
+    const db = await DB.getDatabase();
     
     // Fetch pre-computed results
     const results = await db.collection('CheatDetectionResults').findOne({ 
