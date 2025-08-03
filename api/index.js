@@ -481,7 +481,7 @@ app.get("/admin/exam-sessions", (req, res) => {
 // FinalExams endpoints
 app.get("/admin/final-exams", async (req, res) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit) || 50, 100); // Max 100 per page
+    const limit = Math.min(parseInt(req.query.limit) || 100, 200); // Default 100, max 200 per page
     const skip = parseInt(req.query.skip) || 0;
     
     const [finalExams, totalCount] = await Promise.all([
@@ -1239,6 +1239,61 @@ app.get("/api/admin/questions-with-answers", async (req, res) => {
   }
 });
 
+// OPTIMIZED: New paginated questions endpoint
+app.get("/api/admin/questions-optimized", async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
+    const difficulty = req.query.difficulty || 'all';
+    const gradingStatus = req.query.gradingStatus || 'all';
+    const includeGradingStatus = req.query.includeGradingStatus === 'true';
+    const questionId = req.query.questionId; // Support for fetching specific question
+    
+    console.log(`🚀 Optimized questions API: page ${page}, limit ${limit}${questionId ? `, questionId ${questionId}` : ''}`);
+    
+    const filters = {
+      search: search.trim(),
+      difficulty,
+      gradingStatus,
+      includeGradingStatus,
+      questionId: questionId ? parseInt(questionId) : undefined
+    };
+    
+    const result = await DB.getQuestionsWithAnswersOptimized(page, limit, filters);
+    
+    console.log(`✅ API returning ${result.questions.length} questions`);
+    res.json(result);
+  } catch (error) {
+    console.error('Error getting optimized questions:', error);
+    res.status(500).json({ error: 'Failed to get optimized questions' });
+  }
+});
+
+// OPTIMIZED: Question answers with pagination
+app.get("/api/admin/question/:questionId/answers-optimized", async (req, res) => {
+  try {
+    const questionId = req.params.questionId;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    
+    console.log(`🔄 Optimized answers API: question ${questionId}, page ${page}, limit ${limit}`);
+    
+    const questionData = await DB.getQuestionAnswersOptimized(questionId, page, limit);
+    
+    if (!questionData) {
+      return res.status(404).json({ error: 'Question not found' });
+    }
+    
+    console.log(`✅ API returning ${questionData.answers.length} answers for question ${questionId}`);
+    res.json(questionData);
+  } catch (error) {
+    console.error('Error getting optimized question answers:', error);
+    res.status(500).json({ error: 'Failed to get optimized question answers' });
+  }
+});
+
+// Legacy endpoint for backwards compatibility
 app.get("/api/admin/question/:questionId/answers", async (req, res) => {
   try {
     const questionId = req.params.questionId;
@@ -1519,6 +1574,294 @@ app.get("/api/admin/debug/exam-answers", async (req, res) => {
   }
 });
 
+
+// Cheat Detection endpoint
+app.post("/admin/cheat-detection", async (req, res) => {
+  try {
+    const { similarityThreshold = 0.8, aiThreshold = 30 } = req.body;
+
+    console.log('🔍 Starting cheat detection analysis...');
+
+    // Get all final exams from FinalExams collection
+    const finalExams = await DB.getAllFinalExams(1000, 0); // Get more exams for analysis
+    console.log(`Found ${finalExams.length} completed exam sessions`);
+
+    // Collect all answers from all exams
+    const allAnswers = [];
+    const examAnswers = []; // For frontend AI processing
+
+    for (const session of finalExams) {
+      try {
+        if (session.status !== 'completed') continue;
+
+        // Get exam data using existing DB functions
+        const examData = await DB.getFinalExamForGrading(session._id);
+        
+        if (examData && examData.mergedAnswers && Array.isArray(examData.mergedAnswers)) {
+          for (let i = 0; i < examData.mergedAnswers.length; i++) {
+            const answer = examData.mergedAnswers[i];
+            if (answer.studentAnswer && answer.studentAnswer.trim()) {
+              const examAnswer = {
+                _id: session._id,
+                studentEmail: session.studentEmail,
+                studentName: session.studentName,
+                studentId: session.studentId,
+                questionIndex: i,
+                questionText: answer.questionText || `שאלה ${i + 1}`,
+                studentAnswer: answer.studentAnswer,
+                examId: session._id
+              };
+              
+              allAnswers.push(examAnswer);
+              examAnswers.push(examAnswer); // For frontend processing
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Error processing exam ${session._id}:`, error);
+      }
+    }
+
+    console.log(`Collected ${allAnswers.length} answers for analysis`);
+
+    // Similarity Analysis using the algorithms from the frontend
+    const similarityMatches = [];
+    const answersByQuestion = {};
+
+    // Group answers by question
+    allAnswers.forEach(answer => {
+      if (!answersByQuestion[answer.questionIndex]) {
+        answersByQuestion[answer.questionIndex] = [];
+      }
+      answersByQuestion[answer.questionIndex].push(answer);
+    });
+
+    // Text similarity functions (copied from frontend)
+    function calculateJaccardSimilarity(text1, text2) {
+      const normalize = (text) => {
+        return text
+          .toLowerCase()
+          .replace(/[^\w\s]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .split(' ')
+          .filter(word => word.length > 2);
+      };
+
+      const tokens1 = new Set(normalize(text1));
+      const tokens2 = new Set(normalize(text2));
+
+      if (tokens1.size === 0 && tokens2.size === 0) return 1;
+      if (tokens1.size === 0 || tokens2.size === 0) return 0;
+
+      const intersection = new Set([...tokens1].filter(x => tokens2.has(x)));
+      const union = new Set([...tokens1, ...tokens2]);
+
+      return intersection.size / union.size;
+    }
+
+    function calculateLevenshteinSimilarity(str1, str2) {
+      const matrix = [];
+      const len1 = str1.length;
+      const len2 = str2.length;
+
+      if (len1 === 0) return len2 === 0 ? 1 : 0;
+      if (len2 === 0) return 0;
+
+      for (let i = 0; i <= len2; i++) {
+        matrix[i] = [i];
+      }
+      for (let j = 0; j <= len1; j++) {
+        matrix[0][j] = j;
+      }
+
+      for (let i = 1; i <= len2; i++) {
+        for (let j = 1; j <= len1; j++) {
+          if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+            matrix[i][j] = matrix[i - 1][j - 1];
+          } else {
+            matrix[i][j] = Math.min(
+              matrix[i - 1][j - 1] + 1,
+              matrix[i][j - 1] + 1,
+              matrix[i - 1][j] + 1
+            );
+          }
+        }
+      }
+
+      const maxLen = Math.max(len1, len2);
+      return (maxLen - matrix[len2][len1]) / maxLen;
+    }
+
+    function calculateSequenceSimilarity(text1, text2) {
+      const sqlKeywords = ['SELECT', 'FROM', 'WHERE', 'JOIN', 'GROUP BY', 'HAVING', 'ORDER BY', 'INSERT', 'UPDATE', 'DELETE'];
+      
+      const extractKeywordSequence = (text) => {
+        const upperText = text.toUpperCase();
+        return sqlKeywords.filter(keyword => upperText.includes(keyword));
+      };
+
+      const seq1 = extractKeywordSequence(text1);
+      const seq2 = extractKeywordSequence(text2);
+
+      if (seq1.length === 0 && seq2.length === 0) return 1;
+      if (seq1.length === 0 || seq2.length === 0) return 0;
+
+      // Simple LCS calculation
+      const maxLen = Math.max(seq1.length, seq2.length);
+      const commonKeywords = seq1.filter(keyword => seq2.includes(keyword));
+      return commonKeywords.length / maxLen;
+    }
+
+    function calculateAdvancedSimilarity(text1, text2) {
+      const jaccardScore = calculateJaccardSimilarity(text1, text2);
+      const levenshteinSimilarity = calculateLevenshteinSimilarity(text1, text2);
+      const sequenceSimilarity = calculateSequenceSimilarity(text1, text2);
+      
+      return (jaccardScore * 0.4 + levenshteinSimilarity * 0.3 + sequenceSimilarity * 0.3);
+    }
+
+    function getSuspicionLevel(score) {
+      if (score >= 0.85) return 'high';
+      if (score >= 0.7) return 'medium';
+      return 'low';
+    }
+
+    // Compare answers within each question
+    Object.keys(answersByQuestion).forEach(questionIndexStr => {
+      const questionIndex = parseInt(questionIndexStr);
+      const answers = answersByQuestion[questionIndex];
+      
+      for (let i = 0; i < answers.length - 1; i++) {
+        for (let j = i + 1; j < answers.length; j++) {
+          const answer1 = answers[i];
+          const answer2 = answers[j];
+
+          // Skip if same student
+          if (answer1.studentEmail === answer2.studentEmail) continue;
+
+          const similarity = calculateAdvancedSimilarity(
+            answer1.studentAnswer,
+            answer2.studentAnswer
+          );
+
+          if (similarity >= similarityThreshold) {
+            similarityMatches.push({
+              student1: {
+                id: answer1.studentId || answer1.studentEmail,
+                name: answer1.studentName || 'לא צוין',
+                email: answer1.studentEmail
+              },
+              student2: {
+                id: answer2.studentId || answer2.studentEmail,
+                name: answer2.studentName || 'לא צוין',
+                email: answer2.studentEmail
+              },
+              questionIndex,
+              questionText: answer1.questionText,
+              similarityScore: similarity,
+              student1Answer: answer1.studentAnswer,
+              student2Answer: answer2.studentAnswer,
+              suspicionLevel: getSuspicionLevel(similarity)
+            });
+          }
+        }
+      }
+    });
+
+    // Sort results by suspicion level and score
+    similarityMatches.sort((a, b) => b.similarityScore - a.similarityScore);
+
+    // Calculate statistics
+    const stats = {
+      totalExams: finalExams.length,
+      suspiciousSimilarities: similarityMatches.length,
+      suspiciousAI: 0, // Will be calculated on frontend
+      averageSimilarityScore: similarityMatches.length > 0 
+        ? similarityMatches.reduce((sum, match) => sum + match.similarityScore, 0) / similarityMatches.length 
+        : 0,
+      highRiskPairs: similarityMatches.filter(match => match.suspicionLevel === 'high').length
+    };
+
+    console.log('✅ Cheat detection analysis completed on backend');
+
+    res.json({
+      similarityMatches,
+      aiDetectionResults: [], // Will be populated on frontend
+      examAnswers, // Send raw data for frontend AI processing
+      stats
+    });
+
+  } catch (error) {
+    console.error('Error in cheat detection analysis:', error);
+    res.status(500).json({ error: 'שגיאה בניתוח חשדות העתקה' });
+  }
+});
+
+// PRE-COMPUTED Cheat Detection Results Endpoint
+app.get('/admin/cheat-detection', async (req, res) => {
+  console.log('📊 Fetching pre-computed cheat detection results...');
+  
+  try {
+    // Connect to DB
+    const db = await DB.connectToDatabase();
+    
+    // Fetch pre-computed results
+    const results = await db.collection('CheatDetectionResults').findOne({ 
+      _id: 'cheat-detection-results' 
+    });
+
+    if (!results) {
+      return res.status(404).json({ 
+        error: 'לא נמצאו תוצאות מוכנות',
+        message: 'יש להריץ ניתוח מחדש או לפנות למנהל המערכת',
+        needsAnalysis: true
+      });
+    }
+
+    // Check if results are recent (less than 7 days old)
+    const resultAge = Date.now() - new Date(results.timestamp).getTime();
+    const daysSinceAnalysis = Math.floor(resultAge / (1000 * 60 * 60 * 24));
+    
+    const response = {
+      ...results,
+      metadata: {
+        lastAnalysis: results.timestamp,
+        daysSinceAnalysis,
+        isStale: daysSinceAnalysis > 7,
+        totalResultsCount: {
+          similarities: results.similarityMatches?.length || 0,
+          aiDetections: results.aiDetectionResults?.length || 0
+        }
+      }
+    };
+
+    console.log(`✅ Returning pre-computed results from ${results.timestamp}`);
+    console.log(`📈 Results: ${response.metadata.totalResultsCount.similarities} similarities, ${response.metadata.totalResultsCount.aiDetections} AI detections`);
+    
+    res.json(response);
+
+  } catch (error) {
+    console.error('❌ Error fetching cheat detection results:', error);
+    res.status(500).json({ 
+      error: 'שגיאה בטעינת תוצאות הניתוח',
+      details: error.message 
+    });
+  }
+});
+
+// Trigger new analysis endpoint (optional - for admin use)
+app.post('/admin/cheat-detection/analyze', async (req, res) => {
+  console.log('🔍 Manual analysis trigger requested...');
+  
+  // This would trigger the local script or queue a background job
+  // For now, just return a message
+  res.json({
+    message: 'לניתוח מחדש, יש להריץ את הסקריפט המקומי',
+    instructions: 'node run-cheat-detection-locally.js',
+    status: 'pending'
+  });
+});
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
