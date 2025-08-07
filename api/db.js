@@ -1381,19 +1381,29 @@ module.exports = {
         // BULK query to get grading status for all questions at once from examGrades (מועד ב)
         let gradingStatusMap = new Map();
         if (filters.includeGradingStatus) {
+            // For מועד ב (regular questions), check examGrades collection for graded answers
+            // The examGrades collection stores grades for examSessions
             const gradingStats = await db.collection("examGrades").aggregate([
                 { $match: { questionGrades: { $exists: true, $ne: [] } } },
                 { $unwind: "$questionGrades" },
                 { 
                     $match: { 
-                        "questionGrades.questionId": { $in: questionIds.map(id => id.toString()) }
+                        $or: [
+                            { "questionGrades.questionId": { $in: questionIds.map(id => id.toString()) } },
+                            { "questionGrades.questionIndex": { $in: questionIds } }
+                        ]
                     }
                 },
                 {
                     $group: {
-                        _id: "$questionGrades.questionId",
-                        gradedCount: { $sum: 1 },
-                        totalAnswers: { $sum: 1 }
+                        _id: {
+                            $cond: [
+                                { $ne: ["$questionGrades.questionId", null] },
+                                "$questionGrades.questionId",
+                                "$questionGrades.questionIndex"
+                            ]
+                        },
+                        gradedCount: { $sum: 1 }
                     }
                 }
             ]).toArray();
