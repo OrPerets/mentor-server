@@ -10,54 +10,125 @@ const connectionString = `mongodb+srv://${dbUserName}:${remoteDbPassword}@sqlmen
 // Global variables for connection caching
 let cachedClient = null;
 let cachedDb = null;
+let connectionAttempts = 0;
+const maxConnectionAttempts = 3;
 
 // Connection manager - singleton pattern for Vercel serverless
 async function connectToDatabase() {
     // If we have a cached connection and it's still connected, reuse it
-    if (cachedClient && cachedDb && cachedClient.topology && cachedClient.topology.isConnected()) {
-        console.log('♻️ Reusing existing MongoDB connection');
-        return { client: cachedClient, db: cachedDb };
+    if (cachedClient && cachedDb) {
+        try {
+            // Test the connection with a simple ping
+            await cachedDb.admin().ping();
+            console.log('♻️ Reusing existing MongoDB connection');
+            return { client: cachedClient, db: cachedDb };
+        } catch (error) {
+            console.log('🔄 Cached connection failed, creating new connection...');
+            // Clear cached connection if ping fails
+            cachedClient = null;
+            cachedDb = null;
+        }
     }
 
-    try {
-        console.log('🔌 Creating new MongoDB connection...');
-        
-        // Create new client with optimized settings for serverless
-        const client = new MongoClient(connectionString, {
-            serverApi: {
-                version: ServerApiVersion.v1,
-                strict: true,
-                deprecationErrors: true,
-            },
-            maxPoolSize: 10, // Maintain up to 10 socket connections
-            serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
-            socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-        });
+    while (connectionAttempts < maxConnectionAttempts) {
+        try {
+            console.log(`🔌 Creating new MongoDB connection (attempt ${connectionAttempts + 1})...`);
+            
+            // Create new client with minimal, stable settings for Vercel
+            const client = new MongoClient(connectionString, {
+                serverApi: {
+                    version: ServerApiVersion.v1,
+                    strict: true,
+                    deprecationErrors: true,
+                },
+                maxPoolSize: 1, // Use single connection to avoid pool issues
+                serverSelectionTimeoutMS: 15000, // Increased timeout
+                heartbeatFrequencyMS: 60000, // Less frequent heartbeats
+                minPoolSize: 0, // Allow pool to shrink to 0
+            });
 
-        await client.connect();
-        await client.db("experiment").command({ ping: 1 });
-        
-        console.log("✅ Successfully connected to MongoDB!");
-        
-        // Cache the connection
-        cachedClient = client;
-        cachedDb = client.db("experiment");
-        
-        return { client: cachedClient, db: cachedDb };
-        
-    } catch (error) {
-        console.error(`❌ MongoDB connection failed: ${error}`);
-        // Clear cache on connection failure
-        cachedClient = null;
-        cachedDb = null;
-        throw error;
+            await client.connect();
+            await client.db("experiment").command({ ping: 1 });
+            
+            console.log("✅ Successfully connected to MongoDB!");
+            
+            // Cache the connection
+            cachedClient = client;
+            cachedDb = client.db("experiment");
+            connectionAttempts = 0; // Reset on successful connection
+            
+            return { client: cachedClient, db: cachedDb };
+            
+        } catch (error) {
+            connectionAttempts++;
+            console.error(`❌ MongoDB connection attempt ${connectionAttempts} failed:`, error.message);
+            
+            if (connectionAttempts >= maxConnectionAttempts) {
+                console.error(`❌ Failed to connect after ${maxConnectionAttempts} attempts`);
+                throw error;
+            }
+            
+            // Wait before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, 1000 * connectionAttempts));
+        }
     }
 }
 
-// Helper function to get database instance
+// Helper function to execute database operations with automatic recovery from pool errors
+async function executeWithRetry(operation, operationName = 'Database operation') {
+    const maxRetries = 2;
+    let lastError;
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            const result = await operation();
+            return result;
+        } catch (error) {
+            lastError = error;
+            console.error(`${operationName} failed (attempt ${attempt + 1}):`, error.message);
+            
+            // Check if it's a pool clearing error or connection error
+            if (error.name === 'MongoPoolClearedError' || 
+                error.name === 'MongoNetworkError' || 
+                error.message.includes('SSL routines') ||
+                error.message.includes('connection pool')) {
+                
+                console.log('🔄 Pool/connection error detected, clearing cache and retrying...');
+                // Clear the cached connection
+                cachedClient = null;
+                cachedDb = null;
+                connectionAttempts = 0;
+                
+                // Don't retry on the last attempt
+                if (attempt < maxRetries) {
+                    await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+                    continue;
+                }
+            }
+            
+            // For non-connection errors or last attempt, throw immediately
+            throw error;
+        }
+    }
+    
+    throw lastError;
+}
+
+// Helper function to get database instance with automatic recovery
 async function getDatabase() {
-    const { db } = await connectToDatabase();
-    return db;
+    try {
+        const { db } = await connectToDatabase();
+        return db;
+    } catch (error) {
+        console.error('Database connection failed, clearing cache and retrying...');
+        // Clear cache and try once more
+        cachedClient = null;
+        cachedDb = null;
+        connectionAttempts = 0;
+        
+        const { db } = await connectToDatabase();
+        return db;
+    }
 }
 
 module.exports = {
@@ -538,6 +609,59 @@ module.exports = {
         return activeSession;
     },
 
+    // NEW: Get pre-configured exam session for a student
+    getPreConfiguredExamSession: async (studentId) => {
+        const db = await getDatabase();
+        // Look for pre-configured session for this student
+        const preConfiguredSession = await db.collection("examSessions").findOne({ 
+            studentId: studentId,
+            isPreConfigured: true
+        });
+        return preConfiguredSession;
+    },
+
+    // NEW: Activate a pre-configured exam session
+    activatePreConfiguredExamSession: async (examId, studentEmail, clientIp, browserFingerprint) => {
+        const db = await getDatabase();
+        const { ObjectId } = require('mongodb');
+        
+        // Update the pre-configured session to start the exam
+        const updateData = {
+            startTime: new Date(),
+            status: 'in_progress',
+            studentEmail: studentEmail,
+            clientIp: clientIp,
+            browserFingerprint: browserFingerprint,
+            accessAttempts: [{
+                timestamp: new Date(),
+                clientIp: clientIp,
+                browserFingerprint: browserFingerprint,
+                success: true
+            }],
+            lastUpdated: new Date()
+        };
+        
+        await db.collection("examSessions").updateOne(
+            { _id: new ObjectId(examId) },
+            { $set: updateData }
+        );
+        
+        // Get the updated session
+        const updatedSession = await db.collection("examSessions").findOne({ _id: new ObjectId(examId) });
+        
+        return {
+            examId: updatedSession._id,
+            studentEmail: updatedSession.studentEmail,
+            examTitle: updatedSession.examTitle,
+            startTime: updatedSession.startTime,
+            totalQuestions: updatedSession.totalQuestions,
+            currentQuestionIndex: updatedSession.currentQuestionIndex,
+            studentId: updatedSession.studentId,
+            studentName: updatedSession.studentName,
+            questions: updatedSession.questions // Include pre-configured questions
+        };
+    },
+
     // Check if student has already completed any exam (for one-time restriction)
     hasStudentCompletedExam: async (studentId) => {
         const db = await getDatabase();
@@ -799,13 +923,15 @@ module.exports = {
     getAllFinalExams: async (limit = 100, skip = 0) => {
         const db = await getDatabase();
         
+
+        
         // Only fetch essential fields for listing to reduce memory usage
         const finalExams = await db.collection("finalExams")
             .find({}, {
                 projection: {
                     studentId: 1,
                     studentName: 1,
-                    email: 1,
+                    studentEmail: 1,
                     startTime: 1,
                     endTime: 1,
                     status: 1,
@@ -879,10 +1005,24 @@ module.exports = {
             !deletedQuestions.includes(answer.questionIndex)
         );
         
-        // Get questions details for each remaining answer
+        // Get questions details for each remaining answer (resilient version for deadline)
         const questionsWithAnswers = await Promise.all(
             filteredAnswers.map(async (answer) => {
-                const question = await db.collection("questions").findOne({ id: parseInt(answer.questionId) });
+                let question = null;
+                try {
+                    // Try multiple ways to find the question
+                    if (answer.questionId) {
+                        question = await db.collection("questions").findOne({ id: parseInt(answer.questionId) });
+                        if (!question) {
+                            question = await db.collection("questions").findOne({ _id: answer.questionId });
+                        }
+                        if (!question) {
+                            question = await db.collection("questions").findOne({ id: answer.questionId.toString() });
+                        }
+                    }
+                } catch (err) {
+                    console.log(`Warning: Could not find question for answer with questionId: ${answer.questionId}`);
+                }
                 
                 // Add metadata about the source of this answer
                 const enhancedAnswer = {
@@ -976,33 +1116,35 @@ module.exports = {
     },
 
     getExamForGrading: async (examId) => {
-        const db = await getDatabase();
-        const { ObjectId } = require('mongodb');
-        
-        // Get exam session
-        const examSession = await db.collection("examSessions").findOne({ _id: new ObjectId(examId) });
-        if (!examSession) {
-            return null;
-        }
-        
-        // Get all answers for this exam
-        const answers = await db.collection("examAnswers").find({ examId }).sort({ questionIndex: 1 }).toArray();
-        
-        // Get questions details for each answer
-        const questionsWithAnswers = await Promise.all(
-            answers.map(async (answer) => {
-                const question = await db.collection("questions").findOne({ id: parseInt(answer.questionId) });
-                return {
-                    ...answer,
-                    questionDetails: question || null
-                };
-            })
-        );
-        
-        return {
-            session: examSession,
-            answers: questionsWithAnswers
-        };
+        return await executeWithRetry(async () => {
+            const db = await getDatabase();
+            const { ObjectId } = require('mongodb');
+            
+            // Get exam session
+            const examSession = await db.collection("examSessions").findOne({ _id: new ObjectId(examId) });
+            if (!examSession) {
+                return null;
+            }
+            
+            // Get all answers for this exam
+            const answers = await db.collection("examAnswers").find({ examId }).sort({ questionIndex: 1 }).toArray();
+            
+            // Get questions details for each answer
+            const questionsWithAnswers = await Promise.all(
+                answers.map(async (answer) => {
+                    const question = await db.collection("questions").findOne({ id: parseInt(answer.questionId) });
+                    return {
+                        ...answer,
+                        questionDetails: question || null
+                    };
+                })
+            );
+            
+            return {
+                session: examSession,
+                answers: questionsWithAnswers
+            };
+        }, `getExamForGrading (examId: ${examId})`);
     },
 
     saveExamGrade: async (examId, gradeData) => {
@@ -1059,17 +1201,37 @@ module.exports = {
         
         // Check if grade already exists
         const existingGrade = await db.collection("examGrades").findOne({ examId });
-        
+        let result;
         if (existingGrade) {
             // Update existing grade
-            const result = await db.collection("examGrades").updateOne(
+            result = await db.collection("examGrades").updateOne(
                 { examId },
                 { $set: examGrade }
             );
-            return { gradeId: existingGrade._id, ...examGrade, updated: true };
         } else {
             // Insert new grade
-            const result = await db.collection("examGrades").insertOne(examGrade);
+            result = await db.collection("examGrades").insertOne(examGrade);
+        }
+        // --- NEW: Update score in finalExams and examSessions ---
+        // Calculate the sum of all non-deleted question grades
+        const nonDeletedGrades = (gradeData.questionGrades || []).filter(qg =>
+            !(gradeData.deletedQuestions || []).includes(qg.questionIndex)
+        );
+        const newScore = nonDeletedGrades.reduce((sum, qg) => sum + (qg.score || 0), 0);
+        // Update finalExams
+        await db.collection("finalExams").updateOne(
+            { _id: new ObjectId(examId) },
+            { $set: { score: newScore } }
+        );
+        // Update examSessions (if exists)
+        await db.collection("examSessions").updateOne(
+            { _id: new ObjectId(examId) },
+            { $set: { score: newScore } }
+        );
+        // --- END NEW ---
+        if (existingGrade) {
+            return { gradeId: existingGrade._id, ...examGrade, updated: true };
+        } else {
             return { gradeId: result.insertedId, ...examGrade, updated: false };
         }
     },
@@ -1136,7 +1298,304 @@ module.exports = {
         return questionsWithCounts;
     },
 
-    // NEW: Get questions with answers from FinalExams collection
+    // OPTIMIZED: Get questions with pagination and bulk answer counting
+    getQuestionsWithAnswersOptimized: async (page = 1, limit = 10, filters = {}) => {
+        const db = await getDatabase();
+        const skip = (page - 1) * limit;
+        
+        console.log(`🚀 Optimized query: page ${page}, limit ${limit}, skip ${skip}`);
+        
+        // Build query for questions based on filters
+        let questionsQuery = { approved: true };
+        
+        if (filters.search) {
+            questionsQuery.question = { $regex: filters.search, $options: 'i' };
+        }
+        
+        if (filters.difficulty && filters.difficulty !== 'all') {
+            questionsQuery.difficulty = filters.difficulty;
+        }
+        
+        // Support for fetching specific question by ID
+        if (filters.questionId) {
+            questionsQuery.id = filters.questionId;
+        }
+        
+        // Get total count for pagination
+        const totalQuestions = await db.collection("questions").countDocuments(questionsQuery);
+        
+        // Get questions with pagination
+        const questions = await db.collection("questions")
+            .find(questionsQuery)
+            .sort({ id: 1 })
+            .skip(skip)
+            .limit(limit)
+            .toArray();
+        
+        if (questions.length === 0) {
+            return {
+                questions: [],
+                totalQuestions: 0,
+                totalPages: 0,
+                currentPage: page,
+                hasMore: false
+            };
+        }
+        
+        // Get ALL question IDs for bulk answer counting (more efficient than individual queries)
+        const questionIds = questions.map(q => q.id);
+        console.log(`📊 Bulk counting UNIQUE STUDENTS for ${questionIds.length} questions:`, questionIds);
+        
+        // BULK query to get answer counts for all questions at once from examSessions (מועד ב)
+        const answerCounts = await db.collection("examSessions").aggregate([
+            { $match: { answers: { $exists: true, $ne: [] } } },
+            { $unwind: "$answers" },
+            { 
+                $match: { 
+                    "answers.questionId": { $in: questionIds.map(id => id.toString()) }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        questionId: "$answers.questionId",
+                        studentEmail: "$studentEmail"
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: "$_id.questionId",
+                    count: { $sum: 1 }
+                }
+            }
+        ]).toArray();
+        
+        // Convert to lookup map for O(1) access
+        const answerCountMap = new Map();
+        answerCounts.forEach(result => {
+            const questionId = parseInt(result._id) || result._id;
+            answerCountMap.set(questionId, result.count);
+        });
+        
+        // BULK query to get grading status for all questions at once from examGrades (מועד ב)
+        let gradingStatusMap = new Map();
+        if (filters.includeGradingStatus) {
+            const gradingStats = await db.collection("examGrades").aggregate([
+                { $match: { questionGrades: { $exists: true, $ne: [] } } },
+                { $unwind: "$questionGrades" },
+                { 
+                    $match: { 
+                        "questionGrades.questionId": { $in: questionIds.map(id => id.toString()) }
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$questionGrades.questionId",
+                        gradedCount: { $sum: 1 },
+                        totalAnswers: { $sum: 1 }
+                    }
+                }
+            ]).toArray();
+            
+            gradingStats.forEach(stat => {
+                const questionId = parseInt(stat._id) || stat._id;
+                const totalAnswers = answerCountMap.get(questionId) || 0;
+                const gradedCount = stat.gradedCount || 0;
+                gradingStatusMap.set(questionId, {
+                    gradedCount: gradedCount,
+                    ungradedCount: Math.max(0, totalAnswers - gradedCount),
+                    isCompleted: gradedCount > 0 && gradedCount >= totalAnswers && totalAnswers > 0
+                });
+            });
+        }
+        
+        // Combine results efficiently
+        const questionsWithCounts = questions.map(question => {
+            const answerCount = answerCountMap.get(question.id) || 0;
+            const gradingStatus = gradingStatusMap.get(question.id) || {
+                gradedCount: 0,
+                ungradedCount: answerCount,
+                isCompleted: false
+            };
+            
+            // Calculate completion percentage based on actual grading
+            const completionPercentage = answerCount > 0 ? Math.round((gradingStatus.gradedCount / answerCount) * 100) : 0;
+            
+            return {
+                ...question,
+                answerCount,
+                ...gradingStatus,
+                completionPercentage
+            };
+        });
+        
+        // Apply grading status filter if specified
+        let filteredQuestions = questionsWithCounts;
+        if (filters.gradingStatus && filters.gradingStatus !== 'all') {
+            filteredQuestions = questionsWithCounts.filter(q => {
+                switch (filters.gradingStatus) {
+                    case 'completed':
+                        return q.isCompleted;
+                    case 'partial':
+                        return q.gradedCount > 0 && !q.isCompleted;
+                    case 'ungraded':
+                        return q.gradedCount === 0;
+                    default:
+                        return true;
+                }
+            });
+        }
+        
+        const totalPages = Math.ceil(totalQuestions / limit);
+        
+        console.log(`✅ Optimized query complete: ${filteredQuestions.length} questions, ${totalPages} total pages`);
+        
+        return {
+            questions: filteredQuestions,
+            totalQuestions,
+            totalPages,
+            currentPage: page,
+            hasMore: page < totalPages
+        };
+    },
+
+    // OPTIMIZED: Get question answers with pagination
+    getQuestionAnswersOptimized: async (questionId, page = 1, limit = 20) => {
+        const db = await getDatabase();
+        const skip = (page - 1) * limit;
+        
+        console.log(`🔄 Optimized answer fetch for question ${questionId}, page ${page}, limit ${limit}`);
+        
+        // Get the question details first
+        const question = await db.collection("questions").findOne({ id: parseInt(questionId) });
+        if (!question) {
+            return null;
+        }
+        
+        // Get total count of answers for this question
+        const totalAnswers = await db.collection("finalExams").aggregate([
+            { $match: { mergedAnswers: { $exists: true, $ne: [] } } },
+            { $unwind: "$mergedAnswers" },
+            { 
+                $match: { 
+                    $or: [
+                        { "mergedAnswers.questionId": questionId.toString() },
+                        { "mergedAnswers.questionId": parseInt(questionId) },
+                        { "mergedAnswers.questionDetails.id": parseInt(questionId) }
+                    ]
+                }
+            },
+            { $count: "total" }
+        ]).toArray();
+        
+        const total = totalAnswers.length > 0 ? totalAnswers[0].total : 0;
+        
+        // Get paginated answers
+        const finalExamsWithAnswers = await db.collection("finalExams").aggregate([
+            { $match: { mergedAnswers: { $exists: true, $ne: [] } } },
+            { $unwind: "$mergedAnswers" },
+            { 
+                $match: { 
+                    $or: [
+                        { "mergedAnswers.questionId": questionId.toString() },
+                        { "mergedAnswers.questionId": parseInt(questionId) },
+                        { "mergedAnswers.questionDetails.id": parseInt(questionId) }
+                    ]
+                }
+            },
+            { 
+                $project: {
+                    _id: 1,
+                    studentEmail: 1,
+                    studentName: 1,
+                    studentId: 1,
+                    startTime: 1,
+                    endTime: 1,
+                    status: 1,
+                    answer: "$mergedAnswers",
+                    graded: 1,
+                    review: 1
+                }
+            },
+            { $sort: { "answer.timestamp": -1 } },
+            { $skip: skip },
+            { $limit: limit }
+        ]).toArray();
+        
+        // Process answers and add grading information
+        const answersWithDetails = finalExamsWithAnswers.map((examData) => {
+            const answer = examData.answer;
+            
+            let grade, feedback;
+            if (examData.review && examData.review.questionGrades) {
+                const questionGrade = examData.review.questionGrades.find(qg => qg.questionIndex === answer.questionIndex);
+                if (questionGrade) {
+                    grade = questionGrade.score;
+                    feedback = questionGrade.feedback;
+                }
+            }
+            
+            return {
+                examId: examData._id.toString(),
+                questionIndex: answer.questionIndex,
+                studentAnswer: answer.studentAnswer || answer.answer,
+                timeSpent: answer.timeSpent || 0,
+                timestamp: answer.timestamp || answer.submittedAt || examData.startTime,
+                isCorrect: answer.isCorrect,
+                studentEmail: examData.studentEmail,
+                studentName: examData.studentName,
+                studentId: examData.studentId,
+                examStartTime: examData.startTime,
+                grade: grade,
+                feedback: feedback
+            };
+        });
+        
+        // Deduplicate based on student email
+        const answerMap = new Map();
+        answersWithDetails.forEach(answer => {
+            const key = answer.studentEmail;
+            const existing = answerMap.get(key);
+            
+            if (!existing) {
+                answerMap.set(key, answer);
+            } else {
+                const currentTime = new Date(answer.timestamp).getTime();
+                const existingTime = new Date(existing.timestamp).getTime();
+                
+                if (currentTime > existingTime) {
+                    answerMap.set(key, answer);
+                }
+            }
+        });
+        
+        const uniqueAnswers = Array.from(answerMap.values());
+        const gradedAnswers = uniqueAnswers.filter(a => a.grade !== undefined);
+        const averageGrade = gradedAnswers.length > 0 
+            ? gradedAnswers.reduce((sum, a) => sum + a.grade, 0) / gradedAnswers.length 
+            : 0;
+        
+        const totalPages = Math.ceil(total / limit);
+        
+        console.log(`✅ Optimized answer fetch complete: ${uniqueAnswers.length} unique answers, page ${page}/${totalPages}`);
+        
+        return {
+            question,
+            answers: uniqueAnswers,
+            totalAnswers: total,
+            gradedAnswers: gradedAnswers.length,
+            averageGrade,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                hasMore: page < totalPages,
+                limit
+            }
+        };
+    },
+
+    // Legacy function for backwards compatibility
     getQuestionsWithAnswersFromFinalExams: async () => {
         const db = await getDatabase();
         
@@ -1178,6 +1637,121 @@ module.exports = {
         
         console.log(`Returning ${questionsWithCounts.length} questions with answer counts`);
         return questionsWithCounts;
+    },
+
+    // PAGINATED: Get questions with answers from FinalExams collection with pagination
+    getQuestionsWithAnswersFromFinalExamsPaginated: async (page = 1, limit = 10, filters = {}) => {
+        const db = await getDatabase();
+        const skip = (page - 1) * limit;
+        
+        console.log(`🚀 Paginated FinalExams query: page ${page}, limit ${limit}, skip ${skip}`);
+        
+        // Build query for questions based on filters
+        let questionsQuery = { approved: true };
+        
+        if (filters.search) {
+            questionsQuery.question = { $regex: filters.search, $options: 'i' };
+        }
+        
+        if (filters.difficulty && filters.difficulty !== 'all') {
+            questionsQuery.difficulty = filters.difficulty;
+        }
+        
+        if (filters.questionId) {
+            questionsQuery.id = filters.questionId;
+        }
+        
+        // Get total count of matching questions
+        const totalQuestions = await db.collection("questions").countDocuments(questionsQuery);
+        const totalPages = Math.ceil(totalQuestions / limit);
+        
+        // Get paginated questions
+        const questions = await db.collection("questions")
+            .find(questionsQuery)
+            .sort({ id: 1 })
+            .skip(skip)
+            .limit(limit)
+            .toArray();
+        
+        console.log(`Found ${questions.length} questions for page ${page}`);
+        
+        // For each question, count answers from FinalExams collection
+        const questionsWithCounts = await Promise.all(
+            questions.map(async (question) => {
+                const answerCount = await db.collection("finalExams").aggregate([
+                    { $match: { mergedAnswers: { $exists: true, $ne: [] } } },
+                    { $unwind: "$mergedAnswers" },
+                    { 
+                        $match: { 
+                            $or: [
+                                { "mergedAnswers.questionId": question.id.toString() },
+                                { "mergedAnswers.questionId": question.id },
+                                { "mergedAnswers.questionDetails.id": question.id }
+                            ]
+                        }
+                    },
+                    { $count: "count" }
+                ]).toArray();
+                
+                const count = answerCount.length > 0 ? answerCount[0].count : 0;
+                
+                // Add grading status information if requested
+                let gradedCount = 0;
+                let ungradedCount = 0;
+                let completionPercentage = 0;
+                
+                if (filters.includeGradingStatus && count > 0) {
+                    // Count graded vs ungraded answers
+                    const gradedAnswers = await db.collection("finalExams").aggregate([
+                        { $match: { mergedAnswers: { $exists: true, $ne: [] } } },
+                        { $unwind: "$mergedAnswers" },
+                        { 
+                            $match: { 
+                                $and: [
+                                    {
+                                        $or: [
+                                            { "mergedAnswers.questionId": question.id.toString() },
+                                            { "mergedAnswers.questionId": question.id },
+                                            { "mergedAnswers.questionDetails.id": question.id }
+                                        ]
+                                    },
+                                    {
+                                        $or: [
+                                            { "mergedAnswers.grade": { $exists: true, $ne: null } },
+                                            { "review.questionGrades": { $exists: true } }
+                                        ]
+                                    }
+                                ]
+                            }
+                        },
+                        { $count: "count" }
+                    ]).toArray();
+                    
+                    gradedCount = gradedAnswers.length > 0 ? gradedAnswers[0].count : 0;
+                    ungradedCount = count - gradedCount;
+                    completionPercentage = count > 0 ? Math.round((gradedCount / count) * 100) : 0;
+                }
+                
+                return {
+                    ...question,
+                    answerCount: count,
+                    gradedCount,
+                    ungradedCount,
+                    completionPercentage,
+                    isCompleted: completionPercentage === 100
+                };
+            })
+        );
+        
+        console.log(`✅ Returning ${questionsWithCounts.length} FinalExams questions with pagination`);
+        
+        return {
+            questions: questionsWithCounts,
+            currentPage: page,
+            totalPages,
+            totalQuestions,
+            hasMore: page < totalPages
+        };
     },
 
     // NEW: Get question answers from FinalExams collection
@@ -1242,6 +1816,15 @@ module.exports = {
         
         console.log(`Found ${finalExamsWithAnswers.length} answers for question ${questionId}`);
         
+        // Debug: Check for potential duplicates
+        if (finalExamsWithAnswers.length > 0) {
+            const sampleAnswers = finalExamsWithAnswers.slice(0, 5);
+            console.log('Sample answers for duplicate analysis:');
+            sampleAnswers.forEach((exam, index) => {
+                console.log(`  ${index}: Student=${exam.studentEmail}, QuestionIndex=${exam.answer.questionIndex}, ExamId=${exam._id.toString().slice(-6)}, Timestamp=${exam.answer.timestamp}`);
+            });
+        }
+        
         // Process answers and add grading information
         const answersWithDetails = finalExamsWithAnswers.map((examData) => {
             const answer = examData.answer;
@@ -1272,10 +1855,32 @@ module.exports = {
             };
         });
         
-        // Remove duplicates if any
-        const uniqueAnswers = answersWithDetails.filter((answer, index, self) => 
-            index === self.findIndex(a => a.examId === answer.examId && a.questionIndex === answer.questionIndex)
-        );
+        // Remove duplicates based on student email and questionId (not questionIndex!)
+        // The same question might have different questionIndex values in different exams
+        const answerMap = new Map();
+        
+        answersWithDetails.forEach(answer => {
+            // Use questionId instead of questionIndex for more reliable deduplication
+            const key = `${answer.studentEmail}_${questionId}`;
+            const existing = answerMap.get(key);
+            
+            if (!existing) {
+                answerMap.set(key, answer);
+            } else {
+                // Keep the more recent answer
+                const currentTime = new Date(answer.timestamp).getTime();
+                const existingTime = new Date(existing.timestamp).getTime();
+                
+                if (currentTime > existingTime) {
+                    answerMap.set(key, answer);
+                    console.log(`🔄 Replaced duplicate: Student ${answer.studentEmail} had newer submission`);
+                } else {
+                    console.log(`⏭️ Kept existing: Student ${answer.studentEmail} older submission was better`);
+                }
+            }
+        });
+        
+        const uniqueAnswers = Array.from(answerMap.values());
         
         // Calculate statistics
         const gradedAnswers = uniqueAnswers.filter(a => a.grade !== undefined);
@@ -1355,11 +1960,45 @@ module.exports = {
         const db = await getDatabase();
         const { ObjectId } = require('mongodb');
         
-        // Get the final exam
-        const finalExam = await db.collection("finalExams").findOne({ _id: new ObjectId(examId) });
+        console.log(`🔄 Updating grade for exam ${examId}, question ${questionIndex}, grade ${grade}`);
+        
+        // Try to find the exam in finalExams first
+        let finalExam = await db.collection("finalExams").findOne({ _id: new ObjectId(examId) });
+        
         if (!finalExam) {
-            throw new Error('Final exam not found');
+            console.log(`📋 Exam not found in finalExams, checking examSessions...`);
+            
+            // Try to find in examSessions (regular exams)
+            const examSession = await db.collection("examSessions").findOne({ _id: new ObjectId(examId) });
+            if (!examSession) {
+                throw new Error('Exam not found in either finalExams or examSessions');
+            }
+            
+            console.log(`✅ Found exam in examSessions collection, using examGrades`);
+            
+            // For regular exams, use the examGrades collection
+            const result = await module.exports.updateAnswerGrade(examId, questionIndex, grade, feedback);
+            console.log(`✅ Updated regular exam grade via examGrades collection`);
+            return result;
         }
+        
+        // Check if this is a true final exam (has mergedAnswers) or a regular exam that happens to be in finalExams
+        console.log(`📊 Exam structure check:`);
+        console.log(`   Has mergedAnswers: ${!!finalExam.mergedAnswers} (${finalExam.mergedAnswers?.length || 0} items)`);
+        console.log(`   Has answers: ${!!finalExam.answers} (${finalExam.answers?.length || 0} items)`);
+        
+        const isActualFinalExam = finalExam.mergedAnswers && finalExam.mergedAnswers.length > 0;
+        
+        if (!isActualFinalExam) {
+            console.log(`✅ Found exam in finalExams but no mergedAnswers - treating as regular exam, using examGrades`);
+            
+            // This exam is in finalExams collection but has no mergedAnswers, so treat it as regular exam
+            const result = await module.exports.updateAnswerGrade(examId, questionIndex, grade, feedback);
+            console.log(`✅ Updated regular exam grade via examGrades collection`);
+            return result;
+        }
+        
+        console.log(`✅ Found true final exam in finalExams collection with mergedAnswers`);
         
         // Initialize review object if it doesn't exist
         if (!finalExam.review) {
@@ -1394,6 +2033,23 @@ module.exports = {
             const answer = finalExam.mergedAnswers.find(a => a.questionIndex === questionIndex);
             if (answer && answer.questionDetails && answer.questionDetails.points) {
                 questionGrade.maxScore = answer.questionDetails.points;
+                console.log(`✅ Using question points from mergedAnswers: ${answer.questionDetails.points} for question ${questionIndex}`);
+            } else if (answer && answer.questionId) {
+                // If questionDetails.points is missing, fetch from questions collection
+                console.log(`⚠️ Missing questionDetails.points for question ${questionIndex}, fetching from questions collection...`);
+                try {
+                    const questionFromDB = await db.collection("questions").findOne({ id: parseInt(answer.questionId) });
+                    if (questionFromDB && questionFromDB.points) {
+                        questionGrade.maxScore = questionFromDB.points;
+                        console.log(`✅ Retrieved question points from database: ${questionFromDB.points} for question ${questionIndex}`);
+                    } else {
+                        console.log(`⚠️ No points found in database for questionId ${answer.questionId}, defaulting to 1`);
+                    }
+                } catch (error) {
+                    console.error(`❌ Error fetching question ${answer.questionId} from database:`, error);
+                }
+            } else {
+                console.log(`⚠️ No answer found for questionIndex ${questionIndex} or missing questionId, defaulting maxScore to 1`);
             }
         }
         
@@ -1431,8 +2087,11 @@ module.exports = {
         const db = await getDatabase();
         const { ObjectId } = require('mongodb');
         
+        console.log(`📝 updateAnswerGrade: examId=${examId}, questionIndex=${questionIndex}, grade=${grade}`);
+        
         // Get or create exam grade record
         let examGrade = await db.collection("examGrades").findOne({ examId });
+        console.log(`📊 Existing examGrade found:`, !!examGrade);
         
         if (!examGrade) {
             // Create new exam grade record
@@ -1459,9 +2118,32 @@ module.exports = {
         const questionGrade = {
             questionIndex,
             score: grade,
+            maxScore: 1, // Default, will be updated based on question details
             feedback: feedback || '',
             gradedAt: new Date()
         };
+        
+        // Get question details to set proper maxScore
+        try {
+            const examSession = await db.collection("examSessions").findOne({ _id: new ObjectId(examId) });
+            if (examSession && examSession.answers) {
+                const answer = examSession.answers.find(a => a.questionIndex === questionIndex);
+                if (answer && answer.questionId) {
+                    console.log(`⚠️ Fetching question points for regular exam question ${questionIndex} (questionId: ${answer.questionId})`);
+                    const questionFromDB = await db.collection("questions").findOne({ id: parseInt(answer.questionId) });
+                    if (questionFromDB && questionFromDB.points) {
+                        questionGrade.maxScore = questionFromDB.points;
+                        console.log(`✅ Retrieved question points from database: ${questionFromDB.points} for question ${questionIndex}`);
+                    } else {
+                        console.log(`⚠️ No points found in database for questionId ${answer.questionId}, defaulting to 1`);
+                    }
+                } else {
+                    console.log(`⚠️ No answer or questionId found for questionIndex ${questionIndex}, defaulting maxScore to 1`);
+                }
+            }
+        } catch (error) {
+            console.error(`❌ Error fetching question details for exam ${examId}:`, error);
+        }
         
         if (existingGradeIndex >= 0) {
             examGrade.questionGrades[existingGradeIndex] = questionGrade;
@@ -1469,18 +2151,25 @@ module.exports = {
             examGrade.questionGrades.push(questionGrade);
         }
         
-        // Recalculate total score
+        // Recalculate total scores
         examGrade.totalScore = examGrade.questionGrades.reduce((sum, qg) => sum + qg.score, 0);
+        examGrade.maxScore = examGrade.questionGrades.reduce((sum, qg) => sum + qg.maxScore, 0);
+        examGrade.percentage = examGrade.maxScore > 0 ? Math.round((examGrade.totalScore / examGrade.maxScore) * 100) : 0;
         examGrade.lastUpdated = new Date();
         
         // Update the database
+        console.log(`💾 Saving examGrade: hasId=${!!examGrade._id}, totalScore=${examGrade.totalScore}`);
+        
         if (examGrade._id) {
-            await db.collection("examGrades").updateOne(
+            const updateResult = await db.collection("examGrades").updateOne(
                 { _id: examGrade._id },
                 { $set: examGrade }
             );
+            console.log(`✅ Updated existing examGrade: matched=${updateResult.matchedCount}, modified=${updateResult.modifiedCount}`);
         } else {
-            await db.collection("examGrades").insertOne(examGrade);
+            const insertResult = await db.collection("examGrades").insertOne(examGrade);
+            console.log(`✅ Inserted new examGrade: id=${insertResult.insertedId}`);
+            examGrade._id = insertResult.insertedId;
         }
         
         return examGrade;

@@ -1,63 +1,62 @@
-const { MongoClient, ServerApiVersion } = require('mongodb');
-const fs = require('fs');
-const config = require('./config');
+const { MongoClient } = require("mongodb");
+const fs = require("fs");
+const zlib = require("zlib");
+const path = require("path");
+const { finished } = require("stream/promises");  // 🆕 await gzip.end
 
-const remoteDbPassword = config.dbPassword;
-const dbUserName = config.dbUserName;
-const connectionString = `mongodb+srv://${dbUserName}:${remoteDbPassword}@sqlmentor.ydqmecv.mongodb.net/?retryWrites=true&w=majority&appName=SQLMentor`;
+const uri = "mongodb+srv://sql-admin:SMff5PqhhoVbX6z7@sqlmentor.ydqmecv.mongodb.net";
+const dbName = "experiment";
+const collectionName = "finalExams";
+const outputPath = path.join(__dirname, "finalExams_all.json.gz");
 
-async function exportData() {
-  const client = new MongoClient(connectionString, {
-    serverApi: ServerApiVersion.v1
-  });
+async function exportCollection() {
+  console.time("⏱ Export duration");
+  console.log(`🚀 Starting export from ${dbName}.${collectionName}...`);
+
+  const client = new MongoClient(uri);
+  const output = fs.createWriteStream(outputPath);
+  const gzip = zlib.createGzip();
+  gzip.pipe(output);
 
   try {
     await client.connect();
-    const db = client.db("experiment");
-    const collections = await db.listCollections().toArray();
-    console.log("📁 Collections in DB:", collections.map(c => c.name));
+    const collection = client.db(dbName).collection(collectionName);
 
-    // 1. Export userForms collection
-    const userForms = await db.collection("UserForms").find({}).toArray();
-    fs.writeFileSync("userForms_export.json", JSON.stringify(userForms, null, 2));
-    console.log("✅ userForms exported!");
+    const totalCount = await collection.countDocuments();
+    console.log(`📦 Found ${totalCount} documents to export`);
 
-    // 2. Merge chatMessages with chatSessions (March 2025 to today)
-    const chatMessages = await db.collection("chatMessages").aggregate([
-      {
-        $match: {
-          timestamp: {
-            $gte: new Date("2025-03-01T00:00:00.000Z"),
-            $lte: new Date()
-          }
-        }
-      },
-      {
-        $addFields: {
-          chatIdObject: { $toObjectId: "$chatId" }
-        }
-      },
-      {
-        $lookup: {
-          from: "chatSessions",
-          localField: "chatIdObject",
-          foreignField: "_id",
-          as: "session"
-        }
-      },
-      { $unwind: "$session" }
-    ]).toArray();
-    
-    console.log("✅ Merged & filtered messages:", chatMessages.length);
+    const cursor = collection
+      .find({}, { projection: { _id: 1, examTitle: 1, date: 1, questions: 1 } })
+      .batchSize(10);
 
-    fs.writeFileSync("chatMessages_with_sessions.json", JSON.stringify(chatMessages, null, 2));
-    console.log("✅ chatMessages merged and exported!");
+    let count = 0;
+    let first = true;
 
+    gzip.write("[\n");
+
+    for await (const doc of cursor) {
+      const jsonLine = JSON.stringify(doc);
+      gzip.write((first ? "" : ",\n") + jsonLine);
+      first = false;
+      count++;
+
+      if (count % 10 === 0 || count === totalCount) {
+        console.log(`📤 Exported ${count}/${totalCount}`);
+      }
+    }
+
+    gzip.write("\n]");
+    gzip.end();
+
+    // 🔁 Ensure gzip stream fully flushed
+    await finished(output);
+    console.log("✅ Export complete! Output:", outputPath);
   } catch (err) {
-    console.error("❌ Error exporting data:", err);
+    console.error("❌ Export failed:", err.message);
   } finally {
     await client.close();
+    console.timeEnd("⏱ Export duration");
   }
 }
 
-exportData();
+exportCollection();

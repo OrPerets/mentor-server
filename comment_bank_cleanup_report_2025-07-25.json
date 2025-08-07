@@ -1,0 +1,73 @@
+{
+  "timestamp": "2025-07-25T11:11:56.576Z",
+  "summary": {
+    "originalCount": 412,
+    "finalCount": 402,
+    "removedCount": 10,
+    "reductionPercentage": "2.4",
+    "remainingDuplicates": 0
+  },
+  "questionStats": [
+    {
+      "_id": 9,
+      "count": 48,
+      "totalUsage": 0,
+      "avgScore": 4.916666666666667
+    },
+    {
+      "_id": 40,
+      "count": 29,
+      "totalUsage": 0,
+      "avgScore": 1.5517241379310345
+    },
+    {
+      "_id": 11,
+      "count": 13,
+      "totalUsage": 30,
+      "avgScore": 3.1538461538461537
+    },
+    {
+      "_id": 71,
+      "count": 13,
+      "totalUsage": 3,
+      "avgScore": 3.6153846153846154
+    },
+    {
+      "_id": 1,
+      "count": 11,
+      "totalUsage": 3,
+      "avgScore": 2
+    },
+    {
+      "_id": 53,
+      "count": 10,
+      "totalUsage": 0,
+      "avgScore": 2.5
+    },
+    {
+      "_id": 62,
+      "count": 10,
+      "totalUsage": 0,
+      "avgScore": 2.5
+    },
+    {
+      "_id": 72,
+      "count": 9,
+      "totalUsage": 0,
+      "avgScore": 2.3333333333333335
+    },
+    {
+      "_id": 35,
+      "count": 9,
+      "totalUsage": 0,
+      "avgScore": 2.3333333333333335
+    },
+    {
+      "_id": 59,
+      "count": 9,
+      "totalUsage": 0,
+      "avgScore": 2.3333333333333335
+    }
+  ],
+  "remainingDuplicateGroups": []
+}

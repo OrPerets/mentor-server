@@ -221,24 +221,53 @@ app.post("/exam/start", async (req, res) => {
       });
     }
 
-    // Check if student already has an active session
-    const activeSession = await DB.getActiveExamSession(studentId);
-    if (activeSession) {
-      console.log(`Access denied for student ${studentId}: Active session exists`);
-      return res.status(403).json({ 
-        error: 'יש לך בחינה פעילה',
-        message: 'יש לך בחינה פעילה. אנא פנה למנהל הבחינה.',
-        existingSession: {
-          examId: activeSession._id,
-          startTime: activeSession.startTime
-        }
+    // Look for pre-configured exam session for this student
+    const preConfiguredSession = await DB.getPreConfiguredExamSession(studentId);
+    if (!preConfiguredSession) {
+      console.log(`No pre-configured exam found for student ${studentId}`);
+      return res.status(404).json({ 
+        error: 'לא נמצאה בחינה מוכנה עבור הסטודנט',
+        message: 'לא נמצאה בחינה מוכנה עבור הסטודנט. אנא פנה למנהל הבחינה.'
       });
     }
 
-    // Create new session
-    const session = await DB.createExamSession(studentEmail, examTitle, studentId, studentName, clientIp, browserFingerprint);
-    console.log(`New exam session created for student ${studentId}: ${session.examId}`);
-    res.json(session);
+    // Check if this pre-configured exam has already been started (has a real startTime)
+    if (preConfiguredSession.startTime && preConfiguredSession.status === 'in_progress') {
+      console.log(`Resuming existing exam session for student ${studentId}: ${preConfiguredSession._id}`);
+      
+      // Get current progress (answered questions)
+      const answers = await DB.getExamAnswers(preConfiguredSession._id.toString());
+      const currentQuestionIndex = answers.length; // Next question to answer
+      
+      // Update session's current question index
+      await DB.updateExamSession(preConfiguredSession._id, {
+        currentQuestionIndex: currentQuestionIndex
+      });
+      
+      // Return existing session data in same format as new session
+      return res.json({
+        examId: preConfiguredSession._id,
+        studentEmail: preConfiguredSession.studentEmail,
+        examTitle: preConfiguredSession.examTitle,
+        startTime: preConfiguredSession.startTime,
+        totalQuestions: preConfiguredSession.totalQuestions,
+        currentQuestionIndex: currentQuestionIndex,
+        studentId: preConfiguredSession.studentId,
+        studentName: preConfiguredSession.studentName,
+        isResuming: true // Flag to indicate this is a resumed session
+      });
+    }
+
+    // Activate the pre-configured exam session (set startTime and update status)
+    const activatedSession = await DB.activatePreConfiguredExamSession(
+      preConfiguredSession._id, 
+      studentEmail, 
+      clientIp, 
+      browserFingerprint
+    );
+    
+    console.log(`Pre-configured exam activated for student ${studentId}: ${activatedSession.examId}`);
+    res.json(activatedSession);
     
   } catch (error) {
     console.error('Error starting exam:', error);
@@ -304,6 +333,44 @@ app.get("/exam/:examId/question/:questionIndex", async (req, res) => {
       return res.status(400).json({ error: 'Question index out of range' });
     }
 
+    // Check if this exam has pre-configured questions
+    if (session.questions && session.questions.length > 0) {
+      // Use pre-configured questions (new system)
+      console.log(`📋 Using pre-configured question for position ${currentIndex}`);
+      
+      if (currentIndex >= session.questions.length) {
+        return res.status(400).json({ error: 'Question index out of range for pre-configured exam' });
+      }
+      
+      const preConfiguredQuestion = session.questions[currentIndex];
+      const question = {
+        _id: preConfiguredQuestion.questionId,
+        id: preConfiguredQuestion.questionId,
+        question: preConfiguredQuestion.question,
+        difficulty: preConfiguredQuestion.difficulty,
+        points: preConfiguredQuestion.points,
+        expected_keywords: preConfiguredQuestion.expected_keywords,
+        solution_example: preConfiguredQuestion.solution_example
+      };
+      
+      console.log(`✅ Pre-configured question ${currentIndex + 1}: ID=${question.id}, difficulty=${question.difficulty}, points=${question.points}`);
+      
+      // Return the pre-configured question
+      return res.json({
+        question: question.question,
+        questionId: question.id,
+        difficulty: question.difficulty,
+        points: question.points,
+        questionIndex: currentIndex,
+        totalQuestions: session.totalQuestions,
+        examId: examId,
+        questionNumber: currentIndex + 1
+      });
+    }
+
+    // Legacy system: Dynamic question generation (fallback for old exams)
+    console.log(`⚠️ Using legacy dynamic question generation for exam ${examId}`);
+    
     // New exam structure: 1st question easy, questions 2-12 shuffled, 13th question algebra
     let difficulty = 'easy';
     
@@ -431,6 +498,43 @@ app.post("/exam/:examId/auto-save", (req, res) => {
     });
 });
 
+// Get auto-saved answer for a specific question (for exam resumption)
+app.get("/exam/:examId/auto-save/:questionIndex", async (req, res) => {
+  try {
+    const { examId, questionIndex } = req.params;
+    const { studentId } = req.query;
+    
+    // Get exam session to verify access
+    const session = await DB.getExamSession(examId);
+    if (!session) {
+      return res.status(404).json({ error: 'Exam session not found' });
+    }
+    
+    // Verify student access
+    if (session.studentId !== studentId) {
+      return res.status(403).json({ error: 'Access denied to this exam session' });
+    }
+    
+    // Get the auto-saved answer for this specific question
+    const answers = await DB.getExamAnswers(examId);
+    const answer = answers.find(a => a.questionIndex === parseInt(questionIndex) && a.isAutoSave);
+    
+    if (answer) {
+      res.json({
+        questionIndex: answer.questionIndex,
+        studentAnswer: answer.studentAnswer,
+        timeSpent: answer.timeSpent,
+        lastSaved: answer.submittedAt
+      });
+    } else {
+      res.status(404).json({ error: 'No auto-save found for this question' });
+    }
+  } catch (error) {
+    console.error('Error getting auto-saved answer:', error);
+    res.status(500).json({ error: 'Failed to get auto-saved answer' });
+  }
+});
+
 app.post("/exam/:examId/complete", (req, res) => {
   const examId = req.params.examId;
   const { finalScore } = req.body;
@@ -504,21 +608,7 @@ app.get("/admin/final-exams", async (req, res) => {
   }
 });
 
-app.get("/admin/final-exam/:examId/for-grading", (req, res) => {
-  const examId = req.params.examId;
-  
-  DB.getFinalExamForGrading(examId)
-    .then(examData => {
-      if (!examData) {
-        return res.status(404).json({ error: 'Final exam not found' });
-      }
-      res.json(examData);
-    })
-    .catch(error => {
-      console.error('Error getting final exam for grading:', error);
-      res.status(500).json({ error: 'Failed to get final exam for grading' });
-    });
-});
+// REMOVED: Duplicate endpoint - using the enriched version at line 2037
 
 // Initialize FinalExams collection
 app.post("/admin/initialize-final-exams", async (req, res) => {
@@ -531,47 +621,142 @@ app.post("/admin/initialize-final-exams", async (req, res) => {
   }
 });
 
-app.get("/admin/exam/:examId/for-grading", (req, res) => {
-  const examId = req.params.examId;
-  
-  DB.getExamForGrading(examId)
-    .then(examData => {
-      if (!examData) {
-        return res.status(404).json({ error: 'Exam not found' });
+app.get("/admin/exam/:examId/for-grading", async (req, res) => {
+  try {
+    const examId = req.params.examId;
+    const { ObjectId } = require('mongodb');
+    const db = await DB.getDatabase();
+    
+    // Get exam data
+    const examData = await DB.getExamForGrading(examId);
+    if (!examData) {
+      return res.status(404).json({ error: 'Exam not found' });
+    }
+    
+    // Enrich answers with proper questionDetails if missing
+    if (examData.answers && examData.answers.length > 0) {
+      console.log(`🔧 Enriching regular exam data for ${examId} - checking ${examData.answers.length} answers...`);
+      
+      for (let i = 0; i < examData.answers.length; i++) {
+        const answer = examData.answers[i];
+        
+        // If questionDetails.points is missing, fetch from questions collection
+        if (!answer.questionDetails || !answer.questionDetails.points) {
+          if (answer.questionId) {
+            try {
+              const questionFromDB = await db.collection("questions").findOne({ id: parseInt(answer.questionId) });
+              if (questionFromDB && questionFromDB.points) {
+                // Ensure questionDetails exists and populate points
+                if (!answer.questionDetails) {
+                  answer.questionDetails = {};
+                }
+                answer.questionDetails.points = questionFromDB.points;
+                console.log(`✅ Enriched regular exam answer ${i} (questionId: ${answer.questionId}) with ${questionFromDB.points} points`);
+              } else {
+                console.log(`⚠️ Could not find points for questionId ${answer.questionId} in regular exam`);
+              }
+            } catch (error) {
+              console.error(`❌ Error fetching question ${answer.questionId} for regular exam:`, error);
+            }
+          }
+        }
       }
-      res.json(examData);
-    })
-    .catch(error => {
-      console.error('Error getting exam for grading:', error);
-      res.status(500).json({ error: 'Failed to get exam for grading' });
-    });
+    }
+    
+    res.json(examData);
+  } catch (error) {
+    console.error('Error getting exam for grading:', error);
+    res.status(500).json({ error: 'Failed to get exam for grading' });
+  }
 });
 
-app.post("/admin/exam/:examId/grade", (req, res) => {
-  const examId = req.params.examId;
-  const gradeData = req.body;
-  
-  DB.saveExamGrade(examId, gradeData)
-    .then(result => {
-      res.json(result);
-    })
-    .catch(error => {
-      console.error('Error saving exam grade:', error);
-      res.status(500).json({ error: 'Failed to save exam grade' });
-    });
+app.post("/admin/exam/:examId/grade", async (req, res) => {
+  try {
+    const examId = req.params.examId;
+    const gradeData = req.body;
+    
+    console.log('📝 Saving regular exam grade with sync...', examId);
+    
+    // Recalculate totals from question grades to ensure consistency
+    if (gradeData.questionGrades && gradeData.questionGrades.length > 0) {
+      const recalculatedTotalScore = gradeData.questionGrades.reduce((sum, qg) => sum + (qg.score || 0), 0);
+      const recalculatedMaxScore = gradeData.questionGrades.reduce((sum, qg) => sum + (qg.maxScore || 0), 0);
+      const recalculatedPercentage = recalculatedMaxScore > 0 ? Math.round((recalculatedTotalScore / recalculatedMaxScore) * 100) : 0;
+      
+      console.log(`🔄 Regular exam - recalculated totals: ${recalculatedTotalScore}/${recalculatedMaxScore} (${recalculatedPercentage}%)`);
+      
+      // Use recalculated values
+      gradeData.totalScore = recalculatedTotalScore;
+      gradeData.maxScore = recalculatedMaxScore;
+      gradeData.percentage = recalculatedPercentage;
+    }
+    
+    // Save to examGrades collection (primary for regular exams)
+    const result = await DB.saveExamGrade(examId, gradeData);
+    
+    // Also try to sync to finalExams if this exam exists there
+    try {
+      const { ObjectId } = require('mongodb');
+      const db = await DB.getDatabase();
+      
+      const finalExam = await db.collection("finalExams").findOne({ _id: new ObjectId(examId) });
+      if (finalExam) {
+        console.log('💾 Found corresponding finalExam, syncing to review...');
+        
+        const updateData = {
+          'review.totalScore': gradeData.totalScore, // Now using recalculated value
+          'review.maxScore': gradeData.maxScore, // Now using recalculated value
+          'review.percentage': gradeData.percentage, // Now using recalculated value
+          'review.feedback': gradeData.overallFeedback || '',
+          'review.gradedBy': gradeData.gradedBy || 'admin',
+          'review.gradedAt': new Date(),
+          'review.isGraded': true,
+          graded: true
+        };
+        
+        // If question grades are provided, sync them too
+        if (gradeData.questionGrades && gradeData.questionGrades.length > 0) {
+          updateData['review.questionGrades'] = gradeData.questionGrades;
+        }
+        
+        await db.collection("finalExams").updateOne(
+          { _id: new ObjectId(examId) },
+          { $set: updateData }
+        );
+        
+        console.log('✅ Regular exam grade synced to finalExams.review');
+      }
+    } catch (syncError) {
+      console.warn('⚠️ Could not sync to finalExams (exam may be regular exam only):', syncError.message);
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Error saving exam grade:', error);
+    res.status(500).json({ error: 'Failed to save exam grade', details: error.message });
+  }
 });
 
-app.get("/admin/exam/:examId/grade", (req, res) => {
-  const examId = req.params.examId;
-  
-  DB.getExamGrade(examId)
-    .then(grade => {
+app.get("/admin/exam/:examId/grade", async (req, res) => {
+  try {
+    const { examId } = req.params;
+    
+    console.log(`🔍 GET regular exam grade data for: ${examId}`);
+    
+    const grade = await DB.getExamGrade(examId);
+    
+    if (grade) {
+      console.log(`✅ Found grade data in examGrades collection: total score ${grade.totalScore || 0}`);
+      grade.dataSource = 'examGrades';
       res.json(grade);
-    })
-    .catch(error => {
-      console.error('Error getting exam grade:', error);
-      res.status(500).json({ error: 'Failed to get exam grade' });
-    });
+    } else {
+      console.log(`❌ No grade data found in examGrades for: ${examId}`);
+      res.status(404).json({ error: 'No grade data found for this exam' });
+    }
+  } catch (error) {
+    console.error('Error getting exam grade:', error);
+    res.status(500).json({ error: 'Failed to get exam grade' });
+  }
 });
 
 app.get("/admin/exam-grades", (req, res) => {
@@ -585,33 +770,163 @@ app.get("/admin/exam-grades", (req, res) => {
     });
 });
 
-// Final Exam Grade Endpoints
-app.post("/admin/final-exam/:examId/grade", (req, res) => {
-  const examId = req.params.examId;
-  const gradeData = req.body;
-  
-  DB.saveExamGrade(examId, gradeData)
-    .then(result => {
+// Final Exam Grade Endpoints - UPDATED FOR SYNC
+app.post("/admin/final-exam/:examId/grade", async (req, res) => {
+  try {
+    const examId = req.params.examId;
+    const gradeData = req.body;
+    
+    console.log('📝 Saving final exam grade with sync...', examId);
+    
+    // Check if this is a partial save (individual question) or full save
+    if (gradeData.partialSave && gradeData.questionGrades && gradeData.questionGrades.length > 0) {
+      // For individual question saves, update finalExams.review using the same method as grade-by-questions
+      console.log('💾 Individual question save detected, syncing to finalExams.review...');
+      
+      const { ObjectId } = require('mongodb');
+      const db = await DB.getDatabase();
+      
+      // Get current exam data
+      const finalExam = await db.collection("finalExams").findOne({ _id: new ObjectId(examId) });
+      if (!finalExam) {
+        throw new Error('Final exam not found');
+      }
+      
+      // Initialize review if it doesn't exist
+      if (!finalExam.review) {
+        finalExam.review = {
+          questionGrades: [],
+          totalScore: 0,
+          maxScore: 0,
+          percentage: 0,
+          feedback: '',
+          gradedBy: 'admin',
+          gradedAt: new Date(),
+          isGraded: false
+        };
+      }
+      
+      if (!finalExam.review.questionGrades) {
+        finalExam.review.questionGrades = [];
+      }
+      
+      // Update question grades in review
+      gradeData.questionGrades.forEach(newGrade => {
+        const existingIndex = finalExam.review.questionGrades.findIndex(
+          qg => qg.questionIndex === newGrade.questionIndex
+        );
+        
+        const questionGrade = {
+          questionIndex: newGrade.questionIndex,
+          score: newGrade.score,
+          maxScore: newGrade.maxScore,
+          feedback: newGrade.feedback || '',
+          gradedAt: new Date()
+        };
+        
+        if (existingIndex >= 0) {
+          finalExam.review.questionGrades[existingIndex] = questionGrade;
+        } else {
+          finalExam.review.questionGrades.push(questionGrade);
+        }
+      });
+      
+      // Recalculate totals based on individual question scores (this ensures consistency)
+      finalExam.review.totalScore = finalExam.review.questionGrades.reduce((sum, qg) => sum + (qg.score || 0), 0);
+      finalExam.review.maxScore = finalExam.review.questionGrades.reduce((sum, qg) => sum + (qg.maxScore || 0), 0);
+      finalExam.review.percentage = finalExam.review.maxScore > 0 ? Math.round((finalExam.review.totalScore / finalExam.review.maxScore) * 100) : 0;
+      
+      console.log(`🔄 Recalculated backend totals: ${finalExam.review.totalScore}/${finalExam.review.maxScore} (${finalExam.review.percentage}%)`);
+      
+      // Update overall feedback if provided
+      if (gradeData.overallFeedback !== undefined) {
+        finalExam.review.feedback = gradeData.overallFeedback;
+      }
+      
+      // Mark as graded if all questions have grades
+      const totalQuestions = finalExam.mergedAnswers ? finalExam.mergedAnswers.length : 0;
+      finalExam.review.isGraded = finalExam.review.questionGrades.length >= totalQuestions;
+      finalExam.graded = finalExam.review.isGraded;
+      
+      // Save to finalExams.review
+      await db.collection("finalExams").updateOne(
+        { _id: new ObjectId(examId) },
+        { 
+          $set: { 
+            review: finalExam.review,
+            graded: finalExam.graded
+          }
+        }
+      );
+      
+      console.log('✅ Individual question grade synced to finalExams.review');
+      
+      // Also sync to examGrades collection for backward compatibility
+      try {
+        await DB.saveExamGrade(examId, {
+          ...gradeData,
+          totalScore: finalExam.review.totalScore,
+          maxScore: finalExam.review.maxScore,
+          percentage: finalExam.review.percentage
+        });
+        console.log('✅ Synced recalculated totals to examGrades collection');
+      } catch (syncError) {
+        console.warn('⚠️ Failed to sync to examGrades collection:', syncError.message);
+      }
+      
+      res.json({ 
+        success: true, 
+        message: 'Grade saved and synced successfully',
+        review: finalExam.review
+      });
+      
+    } else {
+      // For overall exam saves, use the existing method but ensure sync
+      console.log('💾 Overall exam save detected...');
+      
+      const result = await DB.saveExamGrade(examId, gradeData);
+      
+      // Also update finalExams.review if question grades are provided (use recalculated totals)
+      if (gradeData.questionGrades && gradeData.questionGrades.length > 0) {
+        const { ObjectId } = require('mongodb');
+        const db = await DB.getDatabase();
+        
+        // Recalculate totals from question grades to ensure consistency
+        const recalculatedTotalScore = gradeData.questionGrades.reduce((sum, qg) => sum + (qg.score || 0), 0);
+        const recalculatedMaxScore = gradeData.questionGrades.reduce((sum, qg) => sum + (qg.maxScore || 0), 0);
+        const recalculatedPercentage = recalculatedMaxScore > 0 ? Math.round((recalculatedTotalScore / recalculatedMaxScore) * 100) : 0;
+        
+        console.log(`🔄 Overall save - recalculated totals: ${recalculatedTotalScore}/${recalculatedMaxScore} (${recalculatedPercentage}%)`);
+        
+        await db.collection("finalExams").updateOne(
+          { _id: new ObjectId(examId) },
+          { 
+            $set: { 
+              'review.questionGrades': gradeData.questionGrades,
+              'review.totalScore': recalculatedTotalScore,
+              'review.maxScore': recalculatedMaxScore,
+              'review.percentage': recalculatedPercentage,
+              'review.feedback': gradeData.overallFeedback || '',
+              'review.gradedBy': gradeData.gradedBy || 'admin',
+              'review.gradedAt': new Date(),
+              'review.isGraded': true,
+              graded: true
+            }
+          }
+        );
+        console.log('✅ Overall grade synced to finalExams.review with recalculated totals');
+      }
+      
       res.json(result);
-    })
-    .catch(error => {
-      console.error('Error saving final exam grade:', error);
-      res.status(500).json({ error: 'Failed to save final exam grade' });
-    });
+    }
+    
+  } catch (error) {
+    console.error('Error saving final exam grade:', error);
+    res.status(500).json({ error: 'Failed to save final exam grade', details: error.message });
+  }
 });
 
-app.get("/admin/final-exam/:examId/grade", (req, res) => {
-  const examId = req.params.examId;
-  
-  DB.getExamGrade(examId)
-    .then(grade => {
-      res.json(grade);
-    })
-    .catch(error => {
-      console.error('Error getting final exam grade:', error);
-      res.status(500).json({ error: 'Failed to get final exam grade' });
-    });
-});
+// REMOVED: Duplicate endpoint - using the enhanced version below that checks finalExams.review
 
 app.get("/student/:studentEmail/exam-history", (req, res) => {
   const studentEmail = req.params.studentEmail;
@@ -660,14 +975,30 @@ app.get("/exam/check-session/:studentId", async (req, res) => {
     const activeSession = await DB.getActiveExamSession(studentId);
     
     if (activeSession) {
+      // Get current progress
+      const answers = await DB.getExamAnswers(activeSession._id.toString());
+      
+      // Determine current question index more intelligently
+      // If there are submitted answers, the current question is the next one to answer
+      // But if there's an auto-save for the next question, they should resume that question
+      let currentQuestionIndex = answers.filter(a => !a.isAutoSave).length;
+      
+      // Check if there's an auto-save for the current question (indicating they were working on it)
+      const hasAutoSaveForCurrent = answers.some(a => a.isAutoSave && a.questionIndex === currentQuestionIndex);
+      
+      console.log(`Student ${studentId} session check: ${answers.length} total answers, ${currentQuestionIndex} submitted answers, hasAutoSave: ${hasAutoSaveForCurrent}`);
+      
       res.json({
         hasActiveSession: true,
         session: {
           examId: activeSession._id,
           startTime: activeSession.startTime,
-          currentQuestionIndex: activeSession.currentQuestionIndex,
+          currentQuestionIndex: currentQuestionIndex,
           totalQuestions: activeSession.totalQuestions,
-          studentName: activeSession.studentName
+          studentName: activeSession.studentName,
+          answeredQuestions: answers.filter(a => !a.isAutoSave).length,
+          canResume: currentQuestionIndex < activeSession.totalQuestions, // Can resume if not all questions answered
+          hasAutoSaveForCurrent: hasAutoSaveForCurrent
         }
       });
     } else {
@@ -678,6 +1009,61 @@ app.get("/exam/check-session/:studentId", async (req, res) => {
   } catch (error) {
     console.error('Error checking for active session:', error);
     res.status(500).json({ error: 'Failed to check for active session' });
+  }
+});
+
+// New endpoint to get detailed exam progress for resumption
+app.get("/exam/:examId/progress", async (req, res) => {
+  try {
+    const { examId } = req.params;
+    const { studentId } = req.query;
+    
+    // Get exam session
+    const session = await DB.getExamSession(examId);
+    if (!session) {
+      return res.status(404).json({ error: 'Exam session not found' });
+    }
+    
+    // Verify student access
+    if (session.studentId !== studentId) {
+      return res.status(403).json({ error: 'Access denied to this exam session' });
+    }
+    
+    // Get all answered questions
+    const answers = await DB.getExamAnswers(examId);
+    
+    // Determine current question index more intelligently
+    // Count only submitted (non-auto-save) answers for the current position
+    const submittedAnswers = answers.filter(a => !a.isAutoSave);
+    const currentQuestionIndex = submittedAnswers.length;
+    
+    // Calculate time spent so far (including auto-saves)
+    const totalTimeSpent = answers.reduce((sum, answer) => sum + (answer.timeSpent || 0), 0);
+    
+    res.json({
+      examId: session._id,
+      studentId: session.studentId,
+      studentName: session.studentName,
+      startTime: session.startTime,
+      currentQuestionIndex: currentQuestionIndex,
+      totalQuestions: session.totalQuestions,
+      answeredQuestions: submittedAnswers.length,
+      totalTimeSpent: totalTimeSpent,
+      isCompleted: session.status === 'completed',
+      canResume: currentQuestionIndex < session.totalQuestions && session.status === 'in_progress',
+      answers: answers.map(answer => ({
+        questionIndex: answer.questionIndex,
+        questionId: answer.questionId,
+        difficulty: answer.difficulty,
+        studentAnswer: answer.studentAnswer,
+        timeSpent: answer.timeSpent,
+        isCorrect: answer.isCorrect,
+        submittedAt: answer.submittedAt
+      }))
+    });
+  } catch (error) {
+    console.error('Error getting exam progress:', error);
+    res.status(500).json({ error: 'Failed to get exam progress' });
   }
 });
 
@@ -1230,9 +1616,36 @@ function groupAnomaliesByType(anomalies) {
 // Grade by Question API endpoints
 app.get("/api/admin/questions-with-answers", async (req, res) => {
   try {
-    // Use new FinalExams-based function
-    const questions = await DB.getQuestionsWithAnswersFromFinalExams();
-    res.json(questions);
+    // Support pagination parameters like questions-optimized
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
+    const difficulty = req.query.difficulty || 'all';
+    const gradingStatus = req.query.gradingStatus || 'all';
+    const includeGradingStatus = req.query.includeGradingStatus === 'true';
+    const questionId = req.query.questionId;
+    
+    console.log(`🚀 FinalExams questions API: page ${page}, limit ${limit}${questionId ? `, questionId ${questionId}` : ''}`);
+    
+    // Check if pagination parameters are provided
+    if (req.query.page || req.query.limit) {
+      // Use paginated version with filters
+      const filters = {
+        search: search.trim(),
+        difficulty,
+        gradingStatus,
+        includeGradingStatus,
+        questionId: questionId ? parseInt(questionId) : undefined
+      };
+      
+      const result = await DB.getQuestionsWithAnswersFromFinalExamsPaginated(page, limit, filters);
+      console.log(`✅ API returning ${result.questions.length} FinalExams questions`);
+      res.json(result);
+    } else {
+      // Legacy support - return all questions
+      const questions = await DB.getQuestionsWithAnswersFromFinalExams();
+      res.json(questions);
+    }
   } catch (error) {
     console.error('Error getting questions with answers:', error);
     res.status(500).json({ error: 'Failed to get questions with answers' });
@@ -1862,6 +2275,122 @@ app.post('/admin/cheat-detection/analyze', async (req, res) => {
     status: 'pending'
   });
 });
+
+// MISSING ADMIN ENDPOINTS FOR FINAL EXAMS (Required for grade synchronization)
+
+// Get final exam data for grading (includes review information)
+app.get("/admin/final-exam/:examId/for-grading", async (req, res) => {
+  try {
+    const { examId } = req.params;
+    
+    // Use the proper DB function that structures the data correctly
+    const examData = await DB.getFinalExamForGrading(examId);
+    
+    // Load existing grade data from both sources (robust approach for deadline)
+    try {
+      const { ObjectId } = require('mongodb');
+      const db = await DB.getDatabase();
+      
+      // ALWAYS check finalExams first (primary source)
+      const finalExam = await db.collection("finalExams").findOne({ _id: new ObjectId(examId) });
+      
+      if (finalExam?.review?.questionGrades && finalExam.review.questionGrades.length > 0) {
+        examData.existingGrades = finalExam.review.questionGrades;
+        console.log(`✅ Loaded ${finalExam.review.questionGrades.length} grades from finalExams.review`);
+      } else {
+        // Fallback to examGrades collection
+        try {
+          let gradeResponse = await DB.getExamGrade(examId);
+          if (gradeResponse?.questionGrades) {
+            examData.existingGrades = gradeResponse.questionGrades;
+            console.log(`✅ Loaded ${gradeResponse.questionGrades.length} grades from examGrades collection`);
+          } else {
+            console.log('⚠️ No grades found in either finalExams.review or examGrades');
+          }
+        } catch (examGradeErr) {
+          console.log('⚠️ No grades found in examGrades collection');
+        }
+      }
+    } catch (err) {
+      console.log('❌ Error loading grade data:', err.message);
+    }
+    
+    // Return the properly structured exam data
+    res.json(examData);
+  } catch (error) {
+    console.error('Error fetching final exam for grading:', error);
+    res.status(500).json({ error: 'Failed to fetch final exam for grading' });
+  }
+});
+
+// Get final exam grade data
+app.get("/admin/final-exam/:examId/grade", async (req, res) => {
+  try {
+    const { examId } = req.params;
+    const { ObjectId } = require('mongodb');
+    const db = await DB.getDatabase();
+    
+    console.log(`🔍 GET final exam grade data for: ${examId}`);
+    console.log(`📋 Starting grade data retrieval...`);
+    
+    // Get the final exam
+    const finalExam = await db.collection("finalExams").findOne({ _id: new ObjectId(examId) });
+    
+    if (!finalExam) {
+      console.log(`❌ Final exam not found: ${examId}`);
+      return res.status(404).json({ error: 'Final exam not found' });
+    }
+    
+    // Return grade data from the review field, or fallback to examGrades collection
+    console.log(`📊 Final exam review structure:`, {
+      hasReview: !!finalExam.review,
+      hasQuestionGrades: !!(finalExam.review && finalExam.review.questionGrades),
+      questionGradesLength: finalExam.review?.questionGrades?.length || 0,
+      totalScore: finalExam.review?.totalScore || 0
+    });
+    
+    if (finalExam.review && finalExam.review.questionGrades) {
+      const questionGradesCount = finalExam.review.questionGrades.length;
+      const totalScore = finalExam.review.totalScore || 0;
+      console.log(`✅ Found grade data in finalExams.review: ${questionGradesCount} questions, total score: ${totalScore}`);
+      console.log(`📊 Question grades preview:`, finalExam.review.questionGrades.slice(0, 2));
+      
+      const responseData = {
+        questionGrades: finalExam.review.questionGrades,
+        totalScore: finalExam.review.totalScore || 0,
+        maxScore: finalExam.review.maxScore || 0,
+        percentage: finalExam.review.percentage || 0,
+        grade: finalExam.review.percentage ? `${finalExam.review.percentage}%` : '',
+        overallFeedback: finalExam.review.feedback || '',
+        gradedBy: finalExam.review.gradedBy || 'admin',
+        gradedAt: finalExam.review.gradedAt,
+        isGraded: finalExam.review.isGraded || false,
+        dataSource: 'finalExams.review'
+      };
+      
+      res.json(responseData);
+    } else {
+      console.log(`⚠️ No review data found in finalExams, checking examGrades collection...`);
+      
+      // Fallback to examGrades collection for backward compatibility
+      const examGrade = await db.collection("examGrades").findOne({ examId });
+      if (examGrade) {
+        console.log(`✅ Found grade data in examGrades collection:`, examGrade.totalScore || 0);
+        examGrade.dataSource = 'examGrades';
+        res.json(examGrade);
+      } else {
+        console.log(`❌ No grade data found in either finalExams.review or examGrades for: ${examId}`);
+        res.status(404).json({ error: 'No grade data found for this exam' });
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching final exam grade:', error);
+    res.status(500).json({ error: 'Failed to fetch final exam grade' });
+  }
+});
+
+// REMOVED: Duplicate endpoint that was causing conflicts
+// The POST /admin/final-exam/:examId/grade endpoint is now handled above with proper sync logic
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);

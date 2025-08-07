@@ -1,0 +1,79 @@
+{
+  "timestamp": "2025-08-05T05:27:30.526Z",
+  "analysis": "finalExams review structure and question points",
+  "reviewAnalysis": {
+    "totalExams": 67,
+    "examsWithReview": 67,
+    "maxScoreStats": [
+      {
+        "_id": 1,
+        "count": 641
+      },
+      {
+        "_id": 6,
+        "count": 23
+      },
+      {
+        "_id": 8,
+        "count": 16
+      },
+      {
+        "_id": 10,
+        "count": 13
+      }
+    ],
+    "sampleExams": [
+      {
+        "_id": "687897044f90194d704029dc",
+        "studentEmail": "student_211423868@exam.local",
+        "reviewExists": true,
+        "questionGradesCount": 12,
+        "mergedAnswersCount": 13
+      },
+      {
+        "_id": "687899089502ade90c6bf3b4",
+        "studentEmail": "student_318960044@exam.local",
+        "reviewExists": true,
+        "questionGradesCount": 10,
+        "mergedAnswersCount": 13
+      },
+      {
+        "_id": "6878999e9502ade90c6bf3b8",
+        "studentEmail": "student_208581454@exam.local",
+        "reviewExists": true,
+        "questionGradesCount": 9,
+        "mergedAnswersCount": 13
+      }
+    ]
+  },
+  "questionPointsAnalysis": [
+    {
+      "_id": {
+        "difficulty": "algebra",
+        "points": 10
+      },
+      "count": 10
+    },
+    {
+      "_id": {
+        "difficulty": "easy",
+        "points": 6
+      },
+      "count": 16
+    },
+    {
+      "_id": {
+        "difficulty": "hard",
+        "points": 10
+      },
+      "count": 9
+    },
+    {
+      "_id": {
+        "difficulty": "medium",
+        "points": 8
+      },
+      "count": 17
+    }
+  ]
+}
