@@ -1429,14 +1429,17 @@ module.exports = {
                 isCompleted: false
             };
             
-            // Calculate completion percentage based on actual grading
+            // Calculate completion percentage and completion status based on actual grading
             const completionPercentage = answerCount > 0 ? Math.round((gradingStatus.gradedCount / answerCount) * 100) : 0;
+            const isCompleted = gradingStatus.gradedCount > 0 && gradingStatus.gradedCount >= answerCount && answerCount > 0;
             
             return {
                 ...question,
                 answerCount,
-                ...gradingStatus,
-                completionPercentage
+                gradedCount: gradingStatus.gradedCount,
+                ungradedCount: gradingStatus.ungradedCount,
+                completionPercentage,
+                isCompleted
             };
         });
         
