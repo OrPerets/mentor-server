@@ -1912,7 +1912,7 @@ module.exports = {
         };
     },
 
-    getQuestionAnswers: async (questionId) => {
+    getQuestionAnswers: async (questionId, fromDate) => {
         const db = await getDatabase();
         
         // Get the question details
@@ -1921,14 +1921,25 @@ module.exports = {
             return null;
         }
         
-        // Get all exam answers for this question - try both string and number formats
+        // Build base query for this question (support both string and number formats)
+        const baseQuery = {
+            $or: [
+                { questionId: questionId.toString() },
+                { questionId: parseInt(questionId) }
+            ]
+        };
+
+        // Apply date filter if provided
+        const query = fromDate
+            ? { 
+                ...baseQuery,
+                submittedAt: { $gte: new Date(fromDate) }
+              }
+            : baseQuery;
+
+        // Get all exam answers for this question, optionally filtered by date
         const answers = await db.collection("examAnswers")
-            .find({ 
-                $or: [
-                    { questionId: questionId.toString() },
-                    { questionId: parseInt(questionId) }
-                ]
-            })
+            .find(query)
             .sort({ submittedAt: -1 })
             .toArray();
         

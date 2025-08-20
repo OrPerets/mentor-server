@@ -1,0 +1,69 @@
+{
+  "timestamp": "2025-08-08T11:47:42.940Z",
+  "filename": "ExamSessions_Export_2025-08-08.xlsx",
+  "totalSessions": 10,
+  "studentsCount": 10,
+  "questionResponsesCount": 5,
+  "sheets": [
+    {
+      "name": "Student Summary",
+      "columns": [
+        "Student ID",
+        "Student Name",
+        "Student Email",
+        "Grade",
+        "Max Score",
+        "Percentage",
+        "Exam Status",
+        "Start Time",
+        "End Time",
+        "Total Questions",
+        "Graded Questions",
+        "Exam ID"
+      ],
+      "rows": 10
+    },
+    {
+      "name": "Detailed Questions",
+      "columns": [
+        "Student ID",
+        "Student Name",
+        "Student Email",
+        "Exam ID",
+        "Question ID",
+        "Question Index",
+        "Question Text",
+        "Question Difficulty",
+        "Question Points",
+        "Student Answer",
+        "Is Correct",
+        "Grade Received",
+        "Max Grade",
+        "Feedback",
+        "Time Spent (seconds)",
+        "Answer Timestamp",
+        "Graded By",
+        "Graded At"
+      ],
+      "rows": 5
+    },
+    {
+      "name": "Question Set (13)",
+      "columns": [
+        "Student ID",
+        "Student Name",
+        "Student Email",
+        "Exam ID",
+        "Question Index",
+        "Question ID",
+        "Question Text",
+        "Difficulty",
+        "Points",
+        "Score",
+        "Max Score",
+        "Correct?"
+      ],
+      "rows": 119
+    }
+  ]
+}

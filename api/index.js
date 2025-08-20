@@ -1177,550 +1177,41 @@ app.get("/getExerciseSolution/:exerciseId", async (req, res) => {
 });
 
 // Question management endpoints for admin
-app.get("/api/questions", async (req, res) => {
+app.get("/api/admin/questions", async (req, res) => {
   try {
-    const questions = await DB.getAllQuestions();
-    res.json(questions);
-  } catch (error) {
-    console.error('Error getting questions:', error);
-    res.status(500).json({ error: 'Failed to get questions' });
-  }
-});
+    let moed = req.query.moed;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
+    const difficulty = req.query.difficulty || 'all';
+    const gradingStatus = req.query.gradingStatus || 'all';
+    const includeGradingStatus = req.query.includeGradingStatus === 'true';
+    const questionId = req.query.questionId ? parseInt(req.query.questionId) : undefined;
 
-app.post("/api/questions", async (req, res) => {
-  try {
-    const questionData = req.body;
-    const result = await DB.addQuestion(questionData);
-    res.json({ success: true, question: result });
-  } catch (error) {
-    console.error('Error adding question:', error);
-    res.status(500).json({ error: 'Failed to add question' });
-  }
-});
+    const filters = { search, difficulty, gradingStatus, includeGradingStatus, questionId };
 
-app.get("/api/exercises", async (req, res) => {
-  try {
-    const questions = await DB.getAllQuestions();
-    res.json(questions);
-  } catch (error) {
-    console.error('Error getting exercises:', error);
-    res.status(500).json({ error: 'Failed to get exercises' });
-  }
-});
-
-app.delete("/api/questions/:id", async (req, res) => {
-  const questionId = req.params.id;
-  
-  try {
-    const result = await DB.deleteQuestion(questionId);
-    
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ error: 'Question not found' });
-    }
-    
-    res.json({ success: true, message: 'Question deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting question:', error);
-    res.status(500).json({ error: 'Failed to delete question' });
-  }
-});
-
-app.delete("/api/exercises/:id", async (req, res) => {
-  const questionId = req.params.id;
-  
-  try {
-    const result = await DB.deleteQuestion(questionId);
-    
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ error: 'Question not found' });
-    }
-    
-    res.json({ success: true, message: 'Question deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting question:', error);
-    res.status(500).json({ error: 'Failed to delete question' });
-  }
-});
-
-app.post("/api/questions/:id/approve", async (req, res) => {
-  const questionId = req.params.id;
-  const { approvedBy } = req.body;
-  console.log('API: Approving question ID:', questionId, 'Type:', typeof questionId, 'Approved by:', approvedBy);
-  
-  try {
-    const result = await DB.approveQuestion(questionId, approvedBy);
-    console.log('API: Approval result:', result);
-    
-    if (result.matchedCount === 0) {
-      console.log('API: Question not found for ID:', questionId);
-      return res.status(404).json({ error: 'Question not found' });
-    }
-    
-    console.log('API: Question approved successfully');
-    res.json({ success: true, message: 'Question approved successfully' });
-  } catch (error) {
-    console.error('Error approving question:', error);
-    res.status(500).json({ error: 'Failed to approve question' });
-  }
-});
-
-// Update question (difficulty, text, solution) - for questions route
-app.patch("/api/questions/:id", async (req, res) => {
-  const questionId = req.params.id;
-  const updates = req.body;
-  
-  try {
-    const result = await DB.updateQuestion(questionId, updates);
-    
-    if (result.matchedCount === 0) {
-      return res.status(404).json({ error: 'Question not found' });
-    }
-    
-    res.json({ success: true, message: 'Question updated successfully' });
-  } catch (error) {
-    console.error('Error updating question:', error);
-    res.status(500).json({ error: 'Failed to update question' });
-  }
-});
-
-// Get approved questions only - for questions route
-app.get("/api/questions/approved", async (req, res) => {
-  try {
-    const approvedQuestions = await DB.getApprovedQuestions();
-    res.json(approvedQuestions);
-  } catch (error) {
-    console.error('Error getting approved questions:', error);
-    res.status(500).json({ error: 'Failed to get approved questions' });
-  }
-});
-
-app.post("/api/exercises/:id/approve", async (req, res) => {
-  const questionId = req.params.id;
-  const { approvedBy } = req.body;
-  
-  try {
-    const result = await DB.approveQuestion(questionId, approvedBy);
-    
-    if (result.matchedCount === 0) {
-      return res.status(404).json({ error: 'Question not found' });
-    }
-    
-    res.json({ success: true, message: 'Question approved successfully' });
-  } catch (error) {
-    console.error('Error approving question:', error);
-    res.status(500).json({ error: 'Failed to approve question' });
-  }
-});
-
-// Update question (difficulty, text, solution)
-app.patch("/api/exercises/:id", async (req, res) => {
-  const questionId = req.params.id;
-  const updates = req.body;
-  
-  try {
-    const result = await DB.updateQuestion(questionId, updates);
-    
-    if (result.matchedCount === 0) {
-      return res.status(404).json({ error: 'Question not found' });
-    }
-    
-    res.json({ success: true, message: 'Question updated successfully' });
-  } catch (error) {
-    console.error('Error updating question:', error);
-    res.status(500).json({ error: 'Failed to update question' });
-  }
-});
-
-// Get approved questions only
-app.get("/api/exercises/approved", async (req, res) => {
-  try {
-    const approvedQuestions = await DB.getApprovedQuestions();
-    res.json(approvedQuestions);
-  } catch (error) {
-    console.error('Error getting approved questions:', error);
-    res.status(500).json({ error: 'Failed to get approved questions' });
-  }
-});
-
-// Extra time management endpoints
-app.post("/admin/uploadExtraTime", async (req, res) => {
-  try {
-    const { records, uploadedBy, uploadTime } = req.body;
-    
-    if (!records || !Array.isArray(records) || records.length === 0) {
-      return res.status(400).json({ error: 'No records provided' });
-    }
-
-    // Validate records structure
-    for (const record of records) {
-      if (!record.studentId || typeof record.percentage !== 'number' || record.percentage < 0 || record.percentage > 100) {
-        return res.status(400).json({ 
-          error: 'Invalid record format',
-          details: `Record for student ${record.studentId} has invalid data`
-        });
+    let data;
+    if (!moed) {
+      // Smart detection: try finalExams first
+      data = await DB.getQuestionsWithAnswersFromFinalExamsPaginated(page, limit, filters);
+      if (data.questions.length > 0) {
+        moed = 'a';
+      } else {
+        data = await DB.getQuestionsWithAnswersOptimized(page, limit, filters);
+        moed = 'b';
       }
-    }
-
-    const result = await DB.uploadExtraTimeRecords(records, uploadedBy);
-    
-    res.json({
-      success: true,
-      message: `Successfully processed ${records.length} records`,
-      summary: result
-    });
-  } catch (error) {
-    console.error('Error uploading extra time records:', error);
-    res.status(500).json({ error: 'Failed to upload extra time records' });
-  }
-});
-
-app.get("/exam/extraTime/:studentId", async (req, res) => {
-  try {
-    const { studentId } = req.params;
-    
-    if (!studentId) {
-      return res.status(400).json({ error: 'Student ID is required' });
-    }
-
-    const extraTimeData = await DB.getExtraTimeForStudent(studentId);
-    
-    res.json({
-      studentId,
-      percentage: extraTimeData.percentage || 0,
-      hasExtraTime: (extraTimeData.percentage || 0) > 0,
-      createdAt: extraTimeData.createdAt
-    });
-  } catch (error) {
-    console.error('Error fetching extra time for student:', error);
-    res.status(500).json({ error: 'Failed to fetch extra time data' });
-  }
-});
-
-app.get("/admin/extraTime", async (req, res) => {
-  try {
-    const records = await DB.getAllExtraTimeRecords();
-    res.json(records);
-  } catch (error) {
-    console.error('Error fetching all extra time records:', error);
-    res.status(500).json({ error: 'Failed to fetch extra time records' });
-  }
-});
-
-app.delete("/admin/extraTime/:studentId", async (req, res) => {
-  try {
-    const { studentId } = req.params;
-    
-    if (!studentId) {
-      return res.status(400).json({ error: 'Student ID is required' });
-    }
-
-    const result = await DB.deleteExtraTimeRecord(studentId);
-    
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ error: 'Extra time record not found' });
-    }
-    
-    res.json({ success: true, message: 'Extra time record deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting extra time record:', error);
-    res.status(500).json({ error: 'Failed to delete extra time record' });
-  }
-});
-
-// Import analytics helpers
-const {
-  generateAnalyticsReport,
-  analyzeTypingBehavior,
-  detectAnomalies
-} = require('./metricsAnalytics');
-
-// Test endpoint for analytics
-app.get("/admin/research/test", (req, res) => {
-  res.json({ 
-    status: 'success', 
-    message: 'Analytics endpoints are working',
-    timestamp: new Date()
-  });
-});
-
-// Admin research analytics endpoints
-app.get("/admin/research/analytics", async (req, res) => {
-  try {
-    console.log('📊 Starting analytics report generation...');
-    
-    // Get all exam answers with comprehensive metrics
-    const examAnswers = await DB.getAllExamAnswers();
-    console.log(`📊 Found ${examAnswers.length} exam answers`);
-    
-    if (examAnswers.length === 0) {
-      console.log('📊 No exam data found, returning empty report');
-      return res.json({
-        summary: {
-          totalAnswers: 0,
-          totalStudents: 0,
-          analysisTimestamp: new Date(),
-          metricsAvailable: 0
-        },
-        behaviorAnalysis: {
-          overallStats: {},
-          anomalies: [],
-          researchInsights: { correlations: {}, patterns: {}, recommendations: [] }
-        },
-        performanceAnalysis: {
-          overall: { accuracy: 0, averageTime: 0 },
-          byDifficulty: {}
-        },
-        integrityAnalysis: {
-          suspiciousActivities: {},
-          attentionMetrics: {}
-        },
-        recommendations: []
-      });
-    }
-    
-    // Generate comprehensive analytics report
-    console.log('📊 Generating analytics report...');
-    const analyticsReport = generateAnalyticsReport(examAnswers);
-    console.log('📊 Analytics report generated successfully');
-    
-    res.json(analyticsReport);
-  } catch (error) {
-    console.error('❌ Error generating analytics report:', error);
-    console.error('❌ Error stack:', error.stack);
-    res.status(500).json({ 
-      error: 'Failed to generate analytics report',
-      details: error.message 
-    });
-  }
-});
-
-// Get analytics for specific exam session
-app.get("/admin/research/analytics/:examId", async (req, res) => {
-  try {
-    const { examId } = req.params;
-    
-    // Get answers for specific exam
-    const examAnswers = await DB.getExamAnswers(examId);
-    
-    if (!examAnswers || examAnswers.length === 0) {
-      return res.status(404).json({ error: 'No exam data found' });
-    }
-    
-    // Generate analytics for this specific exam
-    const studentReport = generateAnalyticsReport(examAnswers);
-    
-    res.json(studentReport);
-  } catch (error) {
-    console.error('Error generating student analytics:', error);
-    res.status(500).json({ error: 'Failed to generate student analytics' });
-  }
-});
-
-// Export research data as CSV
-app.get("/admin/research/export/csv", async (req, res) => {
-  try {
-    const examAnswers = await DB.getAllExamAnswers();
-    const csvData = generateCSVExport(examAnswers);
-    
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename="exam-research-data.csv"');
-    res.send(csvData);
-  } catch (error) {
-    console.error('Error exporting CSV:', error);
-    res.status(500).json({ error: 'Failed to export CSV data' });
-  }
-});
-
-// Get anomaly detection results
-app.get("/admin/research/anomalies", async (req, res) => {
-  try {
-    const examAnswers = await DB.getAllExamAnswers();
-    const allMetrics = examAnswers
-      .filter(answer => answer.behaviorAnalytics)
-      .map(answer => answer.behaviorAnalytics);
-    
-    const anomalies = detectAnomalies(allMetrics, examAnswers);
-    
-    res.json({
-      totalAnomalies: anomalies.length,
-      highSeverity: anomalies.filter(a => a.severity === 'high').length,
-      mediumSeverity: anomalies.filter(a => a.severity === 'medium').length,
-      byType: groupAnomaliesByType(anomalies),
-      details: anomalies
-    });
-  } catch (error) {
-    console.error('Error detecting anomalies:', error);
-    res.status(500).json({ error: 'Failed to detect anomalies' });
-  }
-});
-
-// Helper function to generate CSV export
-function generateCSVExport(examAnswers) {
-  const headers = [
-    'examId', 'questionIndex', 'difficulty', 'isCorrect', 'timeSpent',
-    'wordsPerMinute', 'rhythmConsistency', 'confidenceScore', 'focusScore',
-    'timeToFirstKeystroke', 'pauseCount', 'totalBackspaces', 'editingEfficiency',
-    'tabSwitches', 'sidebarToggleCount', 'modalOpenCount', 'suspiciousTypingSpeed',
-    'pasteFromExternal', 'devToolsOpened', 'submittedAt'
-  ];
-  
-  let csvContent = headers.join(',') + '\n';
-  
-  examAnswers.forEach(answer => {
-    const metrics = answer.behaviorAnalytics || {};
-    const row = [
-      answer.examId,
-      answer.questionIndex,
-      answer.difficulty,
-      answer.isCorrect,
-      answer.timeSpent,
-      metrics.wordsPerMinute || 0,
-      metrics.rhythmConsistency || 0,
-      metrics.confidenceScore || 0,
-      metrics.focusScore || 0,
-      metrics.timeToFirstKeystroke || 0,
-      metrics.pauseCount || 0,
-      metrics.totalBackspaces || 0,
-      metrics.editingEfficiency || 0,
-      metrics.tabSwitches || 0,
-      metrics.sidebarToggleCount || 0,
-      metrics.modalOpenCount || 0,
-      metrics.suspiciousTypingSpeed || false,
-      metrics.pasteFromExternal || false,
-      metrics.devToolsOpened || false,
-      answer.submittedAt
-    ];
-    
-    csvContent += row.map(field => 
-      typeof field === 'string' ? `"${field.replace(/"/g, '""')}"` : field
-    ).join(',') + '\n';
-  });
-  
-  return csvContent;
-}
-
-// Helper function to group anomalies by type
-function groupAnomaliesByType(anomalies) {
-  const grouped = {};
-  anomalies.forEach(anomaly => {
-    if (!grouped[anomaly.type]) {
-      grouped[anomaly.type] = 0;
-    }
-    grouped[anomaly.type]++;
-  });
-  return grouped;
-}
-
-// getAllExamAnswers function moved to db.js
-
-// Grade by Question API endpoints
-app.get("/api/admin/questions-with-answers", async (req, res) => {
-  try {
-    // Support pagination parameters like questions-optimized
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const search = req.query.search || '';
-    const difficulty = req.query.difficulty || 'all';
-    const gradingStatus = req.query.gradingStatus || 'all';
-    const includeGradingStatus = req.query.includeGradingStatus === 'true';
-    const questionId = req.query.questionId;
-    
-    console.log(`🚀 FinalExams questions API: page ${page}, limit ${limit}${questionId ? `, questionId ${questionId}` : ''}`);
-    
-    // Check if pagination parameters are provided
-    if (req.query.page || req.query.limit) {
-      // Use paginated version with filters
-      const filters = {
-        search: search.trim(),
-        difficulty,
-        gradingStatus,
-        includeGradingStatus,
-        questionId: questionId ? parseInt(questionId) : undefined
-      };
-      
-      const result = await DB.getQuestionsWithAnswersFromFinalExamsPaginated(page, limit, filters);
-      console.log(`✅ API returning ${result.questions.length} FinalExams questions`);
-      res.json(result);
+    } else if (moed === 'a') {
+      data = await DB.getQuestionsWithAnswersFromFinalExamsPaginated(page, limit, filters);
+    } else if (moed === 'b') {
+      data = await DB.getQuestionsWithAnswersOptimized(page, limit, filters);
     } else {
-      // Legacy support - return all questions
-      const questions = await DB.getQuestionsWithAnswersFromFinalExams();
-      res.json(questions);
+      return res.status(400).json({ error: 'Invalid moed parameter' });
     }
-  } catch (error) {
-    console.error('Error getting questions with answers:', error);
-    res.status(500).json({ error: 'Failed to get questions with answers' });
-  }
-});
 
-// OPTIMIZED: New paginated questions endpoint
-app.get("/api/admin/questions-optimized", async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const search = req.query.search || '';
-    const difficulty = req.query.difficulty || 'all';
-    const gradingStatus = req.query.gradingStatus || 'all';
-    const includeGradingStatus = req.query.includeGradingStatus === 'true';
-    const questionId = req.query.questionId; // Support for fetching specific question
-    
-    console.log(`🚀 Optimized questions API: page ${page}, limit ${limit}${questionId ? `, questionId ${questionId}` : ''}`);
-    
-    const filters = {
-      search: search.trim(),
-      difficulty,
-      gradingStatus,
-      includeGradingStatus,
-      questionId: questionId ? parseInt(questionId) : undefined
-    };
-    
-    const result = await DB.getQuestionsWithAnswersOptimized(page, limit, filters);
-    
-    console.log(`✅ API returning ${result.questions.length} questions`);
-    res.json(result);
+    res.json({ ...data, moed });
   } catch (error) {
-    console.error('Error getting optimized questions:', error);
-    res.status(500).json({ error: 'Failed to get optimized questions' });
-  }
-});
-
-// OPTIMIZED: Question answers with pagination
-app.get("/api/admin/question/:questionId/answers-optimized", async (req, res) => {
-  try {
-    const questionId = req.params.questionId;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    
-    console.log(`🔄 Optimized answers API: question ${questionId}, page ${page}, limit ${limit}`);
-    
-    const questionData = await DB.getQuestionAnswersOptimized(questionId, page, limit);
-    
-    if (!questionData) {
-      return res.status(404).json({ error: 'Question not found' });
-    }
-    
-    console.log(`✅ API returning ${questionData.answers.length} answers for question ${questionId}`);
-    res.json(questionData);
-  } catch (error) {
-    console.error('Error getting optimized question answers:', error);
-    res.status(500).json({ error: 'Failed to get optimized question answers' });
-  }
-});
-
-// Legacy endpoint for backwards compatibility
-app.get("/api/admin/question/:questionId/answers", async (req, res) => {
-  try {
-    const questionId = req.params.questionId;
-    // Use new FinalExams-based function
-    const questionData = await DB.getQuestionAnswersFromFinalExams(questionId);
-    
-    if (!questionData) {
-      return res.status(404).json({ error: 'Question not found' });
-    }
-    
-    res.json(questionData);
-  } catch (error) {
-    console.error('Error getting question answers:', error);
-    res.status(500).json({ error: 'Failed to get question answers' });
+    console.error('Error in unified questions endpoint:', error);
+    res.status(500).json({ error: 'Failed to fetch questions' });
   }
 });
 
@@ -2398,3 +1889,75 @@ app.listen(port, () => {
 
 // Export the Express API
 module.exports = app;
+
+// Unified question answers endpoint
+app.get("/api/admin/question/:questionId/answers", async (req, res) => {
+  try {
+    const questionId = req.params.questionId;
+    let moed = req.query.moed;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const fromDateParam = req.query.fromDate;
+    // Default for Moed B filter: from Aug 9, 2025
+    const defaultMoedBFromDate = '2025-08-09T00:00:00.000Z';
+
+  let data;
+  if (!moed) {
+    // Smart detection: try FinalExams (מועד א) first
+    data = await DB.getQuestionAnswersFromFinalExams(questionId);
+    if (data && data.answers.length > 0) {
+      moed = 'a';
+    } else {
+      // Then try regular exams from examSessions/examAnswers (מועד ב)
+      data = await DB.getQuestionAnswers(questionId, fromDateParam || defaultMoedBFromDate);
+      moed = 'b';
+    }
+  } else if (moed === 'a') {
+    data = await DB.getQuestionAnswersFromFinalExams(questionId);
+  } else if (moed === 'b') {
+    // IMPORTANT: For מועד ב use examSessions/examAnswers source
+    data = await DB.getQuestionAnswers(questionId, fromDateParam || defaultMoedBFromDate);
+  } else {
+    return res.status(400).json({ error: 'Invalid moed parameter' });
+  }
+
+    res.json({ ...data, moed });
+  } catch (error) {
+    console.error('Error in unified question answers endpoint:', error);
+    res.status(500).json({ error: 'Failed to fetch question answers' });
+  }
+});
+
+// Unified grade save endpoint
+app.post("/api/admin/grade", async (req, res) => {
+  try {
+    const { type, examId, questionIndex, score, feedback, gradeData } = req.body;
+
+    if (!type || !examId) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+
+    let result;
+    if (type === 'single') {
+      if (questionIndex === undefined || score === undefined) {
+        return res.status(400).json({ error: 'Missing questionIndex or score for single grade' });
+      }
+      result = await DB.updateAnswerGradeInFinalExams(examId, questionIndex, score, feedback);
+    } else if (type === 'full') {
+      if (!gradeData) {
+        return res.status(400).json({ error: 'Missing gradeData for full exam grade' });
+      }
+      result = await DB.saveExamGrade(examId, gradeData);
+    } else {
+      return res.status(400).json({ error: 'Invalid type parameter' });
+    }
+
+    // After saving, sync to other collections if needed
+    // For now, assume save functions handle sync
+
+    res.json({ success: true, result });
+  } catch (error) {
+    console.error('Error in unified grade endpoint:', error);
+    res.status(500).json({ error: 'Failed to save grade' });
+  }
+});

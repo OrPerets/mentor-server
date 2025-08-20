@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-08-20T08:13:01.323Z",
+  "filename": "GradeByQuestion_ByStudent_2025-08-20.xlsx",
+  "totalRows": 977,
+  "finalExamRows": 851,
+  "examSessionRows": 126,
+  "examSessionRowsFiltered": 50,
+  "examSessionRowsDeduped": 27,
+  "examSessionSummaryStudents": 4,
+  "examSessionSummaryTotalPoints": 124,
+  "examSessionTotalsNot100Count": 4
+}
