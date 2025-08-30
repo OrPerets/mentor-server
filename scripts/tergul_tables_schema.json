@@ -1,0 +1,449 @@
+{
+  "tergul12": [
+    {
+      "table": "Facebook",
+      "columns": [
+        {
+          "name": "ID",
+          "type": "int",
+          "notNull": true,
+          "primaryKey": true,
+          "unique": true,
+          "autoIncrement": false,
+          "raw": "ID int PRIMARY KEY"
+        },
+        {
+          "name": "FirstName",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "FirstName text"
+        },
+        {
+          "name": "LastName",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "LastName text"
+        },
+        {
+          "name": "Street",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "Street text"
+        },
+        {
+          "name": "TestGrade",
+          "type": "int",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "TestGrade int"
+        },
+        {
+          "name": "ExeGrade",
+          "type": "int",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "ExeGrade int"
+        }
+      ],
+      "constraints": [],
+      "fullSql": "CREATE TABLE Facebook (\n  ID int PRIMARY KEY,\n  FirstName text,\n  LastName text,\n  Street text,\n  TestGrade int,\n  ExeGrade int\n);\n\nINSERT INTO Facebook VALUES\n(1122, 'Roei', 'Levi', 'Kaplan', 84, 100),\n(2233, 'Sigal', 'Levin', 'Tzur', 90, 95),\n(3344, 'Meital', 'Cohen', 'Bazel', 78, 86),\n(4455, 'Hani', 'Israel', 'Borochov', 92, 73),\n(5566, 'Daniel', 'Ben_Dov', 'Kaplan', 81, 66);"
+    }
+  ],
+  "tergul13": [
+    {
+      "table": "Applicant",
+      "columns": [
+        {
+          "name": "a_id",
+          "type": "int",
+          "notNull": true,
+          "primaryKey": true,
+          "unique": true,
+          "autoIncrement": false,
+          "raw": "a_id int PRIMARY KEY"
+        },
+        {
+          "name": "a_name",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "a_name text"
+        },
+        {
+          "name": "a_address",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "a_address text"
+        }
+      ],
+      "constraints": [],
+      "fullSql": "CREATE TABLE Applicant (\n  a_id int PRIMARY KEY,\n  a_name text,\n  a_address text\n);\n\nINSERT INTO Applicant VALUES\n(460480, 'Oren', 'Tel-Aviv'),\n(495332, 'Dana', 'Netanya'),\n(572460, 'Batya', 'Herzeliia'),\n(487725, 'Shalom', 'Hadera'),\n(552731, 'Rami', 'Tel-Aviv');"
+    },
+    {
+      "table": "Jobs",
+      "columns": [
+        {
+          "name": "job_no",
+          "type": "int",
+          "notNull": true,
+          "primaryKey": true,
+          "unique": true,
+          "autoIncrement": false,
+          "raw": "job_no int PRIMARY KEY"
+        },
+        {
+          "name": "Job_name",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "Job_name text"
+        }
+      ],
+      "constraints": [],
+      "fullSql": "CREATE TABLE Jobs (\n  job_no int PRIMARY KEY,\n  Job_name text\n);\n\nINSERT INTO Jobs VALUES\n(202, 'Programmer'),\n(223, 'Garden'),\n(230, 'Secretary'),\n(240, 'Librarian'),\n(242, 'Teacher');"
+    },
+    {
+      "table": "Qualified",
+      "columns": [
+        {
+          "name": "a_id",
+          "type": "int",
+          "notNull": true,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "a_id int"
+        },
+        {
+          "name": "job_no",
+          "type": "int",
+          "notNull": true,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "job_no int"
+        }
+      ],
+      "constraints": [],
+      "fullSql": "CREATE TABLE Qualified (\n  a_id int,\n  job_no int,\n  FOREIGN KEY (a_id) REFERENCES Applicant(a_id),\n  FOREIGN KEY (job_no) REFERENCES Jobs(job_no)\n);\n\nINSERT INTO Qualified VALUES\n(460480, 242),\n(460480, 223),\n(495332, 230),\n(572460, 230),\n(572460, 223),\n(572460, 242),\n(487725, 202),\n(552731, 242);"
+    },
+    {
+      "table": "Wishes",
+      "columns": [
+        {
+          "name": "a_id",
+          "type": "int",
+          "notNull": true,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "a_id int"
+        },
+        {
+          "name": "job_no",
+          "type": "int",
+          "notNull": true,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "job_no int"
+        }
+      ],
+      "constraints": [],
+      "fullSql": "CREATE TABLE Wishes (\n  a_id int,\n  job_no int,\n  FOREIGN KEY (a_id) REFERENCES Applicant(a_id),\n  FOREIGN KEY (job_no) REFERENCES Jobs(job_no)\n);\n\nINSERT INTO Wishes VALUES\n(460480, 223),\n(495332, 240),\n(495332, 242),\n(572460, 230),\n(487725, 202),\n(487725, 242),\n(552731, 202);"
+    }
+  ],
+  "tergul14": [
+    {
+      "table": "BankClients",
+      "columns": [
+        {
+          "name": "id",
+          "type": "int",
+          "notNull": true,
+          "primaryKey": true,
+          "unique": true,
+          "autoIncrement": false,
+          "raw": "id int PRIMARY KEY"
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "name text"
+        },
+        {
+          "name": "account",
+          "type": "int",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "account int"
+        }
+      ],
+      "constraints": [],
+      "fullSql": "CREATE TABLE BankClients (\n  id int PRIMARY KEY,\n  name text,\n  account int\n);\n\nINSERT INTO BankClients VALUES\n(22455, 'Moshe Levi', 233),\n(23345, 'Yair Cohen', 322),\n(12234, 'Yoav Gal', 227),\n(11113, 'Michal Tam', 998),\n(23349, 'Yonit Ron', 239);"
+    },
+    {
+      "table": "BankAccounts",
+      "columns": [
+        {
+          "name": "account",
+          "type": "int",
+          "notNull": true,
+          "primaryKey": true,
+          "unique": true,
+          "autoIncrement": false,
+          "raw": "account int PRIMARY KEY"
+        },
+        {
+          "name": "credit",
+          "type": "int",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "credit int"
+        },
+        {
+          "name": "type",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "type text"
+        }
+      ],
+      "constraints": [],
+      "fullSql": "CREATE TABLE BankAccounts (\n  account int PRIMARY KEY,\n  credit int,\n  type text\n);\n\nINSERT INTO BankAccounts VALUES\n(233, 2500, 'regular'),\n(322, 300, 'regular'),\n(227, 1000, 'regular'),\n(998, 4000, 'silver'),\n(239, 9560, 'gold');"
+    }
+  ],
+  "tergul15": [
+    {
+      "table": "Friends",
+      "columns": [
+        {
+          "name": "Email",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true,
+          "unique": true,
+          "autoIncrement": false,
+          "raw": "Email text PRIMARY KEY"
+        },
+        {
+          "name": "Name",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "Name text"
+        },
+        {
+          "name": "BirthDate",
+          "type": "date",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "BirthDate date"
+        },
+        {
+          "name": "NumberOfFriends",
+          "type": "int",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "NumberOfFriends int"
+        },
+        {
+          "name": "FB_Status",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "FB_Status text"
+        },
+        {
+          "name": "ProfileOpenDate",
+          "type": "date",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "ProfileOpenDate date"
+        }
+      ],
+      "constraints": [],
+      "fullSql": "CREATE TABLE Friends (\n  Email text PRIMARY KEY,\n  Name text,\n  BirthDate date,\n  NumberOfFriends int,\n  FB_Status text,\n  ProfileOpenDate date\n);\n\nINSERT INTO Friends VALUES\n('itay@gmail.com', 'Itay', '1985-05-20', 268, 'SinGle', '2007-02-02'),\n('nadav@hotmail.com', 'Nadav', '1990-05-18', 321, 'MaRRied', '2009-01-30'),\n('Daniel@yahoo.com', 'Daniel', '1967-05-19', 157, 'MarrlEd', '2010-06-09'),\n('Jonathan@aol.com', 'Jonathan', '1992-05-20', 68, 'SiNGle', '2009-05-16'),\n('Eitan@ynet.co.il', 'Eitan', '1983-05-21', 618, 'MARried', '2011-07-03'),\n('Yuval@home.com', 'Yuval', '1988-05-22', 554, 'SingLE', '2011-09-09'),\n('Idan@google.com', 'Idan', '1978-05-20', 329, 'SingLe', '2012-01-04'),\n('Amit@israel.co.il', 'Amit', '1969-05-18', 662, 'DiVORce', '2006-08-23');"
+    },
+    {
+      "table": "Events",
+      "columns": [
+        {
+          "name": "Num",
+          "type": "int",
+          "notNull": true,
+          "primaryKey": true,
+          "unique": true,
+          "autoIncrement": false,
+          "raw": "Num int PRIMARY KEY"
+        },
+        {
+          "name": "Name",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "Name text"
+        },
+        {
+          "name": "Event_Date",
+          "type": "date",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "Event_Date date"
+        },
+        {
+          "name": "Location",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "Location text"
+        },
+        {
+          "name": "Event_Hour",
+          "type": "time",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "Event_Hour time"
+        },
+        {
+          "name": "EventManager",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "EventManager text"
+        }
+      ],
+      "constraints": [],
+      "fullSql": "CREATE TABLE Events (\n  Num int PRIMARY KEY,\n  Name text,\n  Event_Date date,\n  Location text,\n  Event_Hour time,\n  EventManager text\n);\n\nINSERT INTO Events VALUES\n(250, 'Passover Event', '2012-04-14', 'Tel-Aviv', '23:00', 'Nadav'),\n(251, 'Independent Day Event', '2012-05-25', 'Jaffa', '21:00', 'Amit'),\n(252, 'WiParty Silent Party', '2012-04-11', 'Tel-Aviv', '18:00', 'Itay'),\n(253, 'Daniel Birthday', '2012-05-20', 'Givatyim', '16:30', 'Daniel'),\n(254, 'Jerusalem Day Event', '2012-05-20', 'Jerusalem', '10:30', 'Eitan'),\n(255, 'Student Day', '2012-05-30', 'Eilat', '12:00', 'Jonathan'),\n(256, 'Mimona Event', '2012-04-14', 'Netanya', '20:30', 'Yuval');"
+    }
+  ],
+  "tergul16": [
+    {
+      "table": "Students",
+      "columns": [
+        {
+          "name": "FirstName",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "FirstName text"
+        },
+        {
+          "name": "LastName",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "LastName text"
+        },
+        {
+          "name": "StudentID",
+          "type": "int",
+          "notNull": true,
+          "primaryKey": true,
+          "unique": true,
+          "autoIncrement": false,
+          "raw": "StudentID int PRIMARY KEY"
+        }
+      ],
+      "constraints": [],
+      "fullSql": "CREATE TABLE Students (\n  FirstName text,\n  LastName text,\n  StudentID int PRIMARY KEY\n);\n\nINSERT INTO Students VALUES\n('Avi', 'Cohen', 111),\n('Dan', 'Israeli', 222),\n('Ofer', 'Bar', 333);"
+    },
+    {
+      "table": "Courses",
+      "columns": [
+        {
+          "name": "StudentID",
+          "type": "int",
+          "notNull": true,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "StudentID int"
+        },
+        {
+          "name": "CourseNumber",
+          "type": "int",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "CourseNumber int"
+        },
+        {
+          "name": "CourseName",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "CourseName text"
+        },
+        {
+          "name": "Grade",
+          "type": "int",
+          "notNull": false,
+          "primaryKey": false,
+          "unique": false,
+          "autoIncrement": false,
+          "raw": "Grade int"
+        }
+      ],
+      "constraints": [],
+      "fullSql": "CREATE TABLE Courses (\n  StudentID int,\n  CourseNumber int,\n  CourseName text,\n  Grade int,\n  FOREIGN KEY (StudentID) REFERENCES Students(StudentID)\n);\n\nINSERT INTO Courses VALUES\n(111, 289, 'DB', 96),\n(111, 281, 'Algo', 85),\n(222, 281, 'Algo', 78);"
+    }
+  ]
+}

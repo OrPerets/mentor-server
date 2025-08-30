@@ -5,7 +5,8 @@
   "main": "api/index.js",
   "scripts": {
     "start": "node api/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "seed:practice": "node import_tergul_practice.js"
   },
   "author": "",
   "license": "ISC",
@@ -21,6 +22,7 @@
     "mongodb": "^6.8.0",
     "node-fetch": "^2.6.1",
     "openai": "^4.52.3",
+    "pdf-parse": "^1.1.1",
     "vercel": "^41.0.2",
     "xlsx": "^0.18.5",
     "zod": "^3.23.8"
