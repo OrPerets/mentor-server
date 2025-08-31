@@ -2036,6 +2036,7 @@ app.get("/test-db", async (req, res) => {
 app.post("/practice/submit", async (req, res) => {
   try {
     const { userId, queryId, answer, question } = req.body;
+    console.log('Practice submit request:', { userId, queryId, answer, question });
     
     // Improved answer validation - normalize and compare
     const normalizeAnswer = (sql) => {
@@ -2069,9 +2070,12 @@ app.post("/practice/submit", async (req, res) => {
       return res.status(400).json({ error: 'Invalid query ID format' });
     }
     
+    console.log('Looking for query with ObjectId:', objectId);
     const query = await db.collection("practiceQueries").findOne({ _id: objectId });
+    console.log('Query found:', query ? 'Yes' : 'No');
     
     if (!query) {
+      console.log('Query not found in database');
       return res.status(404).json({ error: 'Query not found' });
     }
     
