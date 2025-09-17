@@ -2071,8 +2071,14 @@ app.post("/practice/submit", async (req, res) => {
     }
     
     console.log('Looking for query with ObjectId:', objectId);
-    const query = await db.collection("practiceQueries").findOne({ _id: objectId });
-    console.log('Query found:', query ? 'Yes' : 'No');
+    let query = await db.collection("practiceQueries").findOne({ _id: objectId });
+    console.log('Query found with ObjectId:', query ? 'Yes' : 'No');
+    
+    if (!query) {
+      console.log('Trying with string queryId:', queryId);
+      query = await db.collection("practiceQueries").findOne({ _id: queryId });
+      console.log('Query found with string:', query ? 'Yes' : 'No');
+    }
     
     if (!query) {
       console.log('Query not found in database');

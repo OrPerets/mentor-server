@@ -4,7 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { MongoClient, ServerApiVersion } = require('mongodb');
-const config = require('./api/config');
+const config = require('../api/config');
 
 const APP_NAME = 'SQLMentor';
 const CLUSTER = 'sqlmentor.ydqmecv.mongodb.net';
@@ -66,14 +66,14 @@ function generateQueriesForTable(tableDoc) {
 
   // Q1: List all rows
   queries.push({
-    question: `List all rows from ${tableName}.`,
+    question: `הצג את כל הרשומות מטבלה ${tableName}.`,
     answerSql: `SELECT * FROM ${tableName};`,
     difficulty: 'easy'
   });
 
   // Q2: Count rows
   queries.push({
-    question: `How many rows are in ${tableName}?`,
+    question: `כמה רשומות יש בטבלה ${tableName}?`,
     answerSql: `SELECT COUNT(*) AS total FROM ${tableName};`,
     difficulty: 'easy'
   });
@@ -82,13 +82,13 @@ function generateQueriesForTable(tableDoc) {
   if (text.length > 0) {
     const tcol = text[0].name;
     queries.push({
-      question: `Return the first 10 rows where ${tcol} is not null, ordered by ${tcol}.`,
+      question: `הצג את 10 הרשומות הראשונות בהן ${tcol} אינו ריק, ממוין לפי ${tcol}.`,
       answerSql: `SELECT * FROM ${tableName} WHERE ${tcol} IS NOT NULL ORDER BY ${tcol} ASC;`,
       difficulty: 'easy'
     });
   } else if (cols.length > 0) {
     queries.push({
-      question: `Return the first 10 rows ordered by the first column.`,
+      question: `הצג את 10 הרשומות הראשונות ממוין לפי העמודה הראשונה.`,
       answerSql: `SELECT * FROM ${tableName} ORDER BY ${cols[0].name} ASC;`,
       difficulty: 'easy'
     });
@@ -99,7 +99,7 @@ function generateQueriesForTable(tableDoc) {
     const ncol = numeric[0].name;
     const threshold = /id/i.test(ncol) ? 100 : 30;
     queries.push({
-      question: `Find rows where ${ncol} > ${threshold}.`,
+      question: `מצא רשומות בהן ${ncol} גדול מ-${threshold}.`,
       answerSql: `SELECT * FROM ${tableName} WHERE ${ncol} > ${threshold};`,
       difficulty: 'medium'
     });
@@ -109,14 +109,14 @@ function generateQueriesForTable(tableDoc) {
   if (date.length > 0) {
     const dcol = date[0].name;
     queries.push({
-      question: `Show the 10 most recent rows by ${dcol}.`,
+      question: `הצג את 10 הרשומות העדכניות ביותר לפי ${dcol}.`,
       answerSql: `SELECT * FROM ${tableName} WHERE ${dcol} IS NOT NULL ORDER BY ${dcol} DESC;`,
       difficulty: 'medium'
     });
   } else if (text.length > 0) {
     const tcol = text[0].name;
     queries.push({
-      question: `Find rows where ${tcol} starts with the letter 'A'.`,
+      question: `מצא רשומות בהן ${tcol} מתחיל באות 'A'.`,
       answerSql: `SELECT * FROM ${tableName} WHERE ${tcol} LIKE 'A%';`,
       difficulty: 'medium'
     });
@@ -205,7 +205,7 @@ async function main() {
       tableUpserts++;
 
       // Generate queries (3-5) and upsert per question
-      const queries = generateQueriesForTable(tableDoc);
+      const queries = generateQueriesForTable({ table: tableName, columns: tableDoc.columns });
       for (const q of queries) {
         const qDoc = {
           answerSql: q.answerSql,
