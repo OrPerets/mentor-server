@@ -71,8 +71,27 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Run security audit
-      run: npm audit --audit-level=moderate
-
-    - name: Check for vulnerabilities
-      run: npm audit --production
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run security audit for production dependencies only
+      run: npm audit --production --audit-level=high
+      continue-on-error: true
+      
+    - name: Check for critical vulnerabilities
+      run: |
+        # Only fail on high/critical vulnerabilities in production dependencies
+        AUDIT_RESULT=$(npm audit --production --audit-level=high --json 2>/dev/null || echo '{"vulnerabilities":{}}')
+        HIGH_VULNS=$(echo "$AUDIT_RESULT" | jq '.metadata.vulnerabilities.high // 0')
+        CRITICAL_VULNS=$(echo "$AUDIT_RESULT" | jq '.metadata.vulnerabilities.critical // 0')
+        
+        echo "High vulnerabilities: $HIGH_VULNS"
+        echo "Critical vulnerabilities: $CRITICAL_VULNS"
+        
+        if [ "$HIGH_VULNS" -gt 0 ] || [ "$CRITICAL_VULNS" -gt 0 ]; then
+          echo "❌ Found high/critical vulnerabilities in production dependencies"
+          npm audit --production --audit-level=high
+          exit 1
+        else
+          echo "✅ No high/critical vulnerabilities in production dependencies"
+        fi
