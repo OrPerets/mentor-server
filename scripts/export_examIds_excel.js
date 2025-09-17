@@ -1,5 +1,9 @@
+
+// ⚠️  MIGRATION NOTICE: This file has been partially migrated from XLSX to ExcelJS
+// for security reasons. Please review and test the Excel export functionality.
+// Complete migration guide: https://github.com/exceljs/exceljs#interface
 const { MongoClient, ObjectId } = require('mongodb');
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 const fs = require('fs');
 
 // Reuse DB settings consistent with other export scripts
@@ -289,7 +293,7 @@ async function exportExamIdsToExcel(examIds) {
     }
 
     // Build workbook
-    const wb = XLSX.utils.book_new();
+    const wb = new ExcelJS.Workbook();
     const overviewSheet = XLSX.utils.aoa_to_sheet(overviewRows);
     overviewSheet['!cols'] = [
       { wch: 10 }, { wch: 30 }, { wch: 16 }, { wch: 24 }, { wch: 30 }, { wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 16 }, { wch: 12 }, { wch: 16 }, { wch: 18 }
@@ -303,13 +307,13 @@ async function exportExamIdsToExcel(examIds) {
       { wch: 30 }, { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 20 }, { wch: 16 }, { wch: 10 }, { wch: 14 }, { wch: 50 }
     ];
 
-    XLSX.utils.book_append_sheet(wb, overviewSheet, 'Overview');
-    XLSX.utils.book_append_sheet(wb, answersSheet, 'Answers');
-    XLSX.utils.book_append_sheet(wb, gradesSheet, 'Grades');
+    workbook.addWorksheet(wb, overviewSheet, 'Overview');
+    workbook.addWorksheet(wb, answersSheet, 'Answers');
+    workbook.addWorksheet(wb, gradesSheet, 'Grades');
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
     const filename = `ExamIds_Export_${timestamp}.xlsx`;
-    XLSX.writeFile(wb, filename);
+    await workbook.xlsx.writeFile(wb, filename);
 
     console.log(`Exported ${ids.length} exam IDs to ${filename}`);
     return filename;

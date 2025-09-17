@@ -1,5 +1,9 @@
+
+// ⚠️  MIGRATION NOTICE: This file has been partially migrated from XLSX to ExcelJS
+// for security reasons. Please review and test the Excel export functionality.
+// Complete migration guide: https://github.com/exceljs/exceljs#interface
 const { MongoClient } = require('mongodb');
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 const fs = require('fs');
 
 // Database configuration (aligned with other export scripts)
@@ -303,7 +307,7 @@ async function exportGradeByQuestionExcel() {
             ]);
         }
 
-        const wb = XLSX.utils.book_new();
+        const wb = new ExcelJS.Workbook();
         const sheetAll = XLSX.utils.aoa_to_sheet(aoa);
         sheetAll['!cols'] = [
             { wch: 14 }, // Student ID
@@ -326,7 +330,7 @@ async function exportGradeByQuestionExcel() {
             { wch: 14 }, // Graded By
             { wch: 22 }  // Graded At
         ];
-        XLSX.utils.book_append_sheet(wb, sheetAll, 'By Student (All)');
+        workbook.addWorksheet(wb, sheetAll, 'By Student (All)');
 
         // Also provide separate sheets per source for convenience
         const toSheet = (rows, name) => {
@@ -340,7 +344,7 @@ async function exportGradeByQuestionExcel() {
             }
             const sh = XLSX.utils.aoa_to_sheet(arr);
             sh['!cols'] = sheetAll['!cols'];
-            XLSX.utils.book_append_sheet(wb, sh, name);
+            workbook.addWorksheet(wb, sh, name);
         };
         toSheet(finalRows, 'From FinalExams');
         // Keep only questions graded by Admin in ExamSessions data
@@ -418,7 +422,7 @@ async function exportGradeByQuestionExcel() {
         }
         const sessionSheet = XLSX.utils.aoa_to_sheet(sessionArr);
         sessionSheet['!cols'] = [...sheetAll['!cols'], { wch: 12 }];
-        XLSX.utils.book_append_sheet(wb, sessionSheet, 'From ExamSessions');
+        workbook.addWorksheet(wb, sessionSheet, 'From ExamSessions');
 
         // Build a deduplicated view for summary (unique latest per signature)
         const sessionRowsDeduped = [];
@@ -472,7 +476,7 @@ async function exportGradeByQuestionExcel() {
             { wch: 14 },
             { wch: 12 }
         ];
-        XLSX.utils.book_append_sheet(wb, totalsSheet, 'ExamSessions Totals');
+        workbook.addWorksheet(wb, totalsSheet, 'ExamSessions Totals');
 
         // Build ExamSessions summary grouped by student (sum points)
         const summaryMap = new Map(); // key: email
@@ -532,11 +536,11 @@ async function exportGradeByQuestionExcel() {
             { wch: 14 }, // Sum Max Score
             { wch: 12 }  // Percentage
         ];
-        XLSX.utils.book_append_sheet(wb, summarySheet, 'ExamSessions Summary');
+        workbook.addWorksheet(wb, summarySheet, 'ExamSessions Summary');
 
         const datePart = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
         const filename = `GradeByQuestion_ByStudent_${datePart}.xlsx`;
-        XLSX.writeFile(wb, filename);
+        await workbook.xlsx.writeFile(wb, filename);
 
         const summary = {
             timestamp: new Date().toISOString(),

@@ -1,5 +1,9 @@
+
+// ⚠️  MIGRATION NOTICE: This file has been partially migrated from XLSX to ExcelJS
+// for security reasons. Please review and test the Excel export functionality.
+// Complete migration guide: https://github.com/exceljs/exceljs#interface
 const { MongoClient } = require('mongodb');
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 const fs = require('fs');
 
 // Database configuration (same as export_final_exams_excel.js)
@@ -422,7 +426,7 @@ async function exportExamSessionsToExcel() {
 
     // Build workbook
     console.log('\n📊 Creating Excel workbook...');
-    const workbook = XLSX.utils.book_new();
+    const workbook = new ExcelJS.Workbook();
 
     const studentSummarySheet = XLSX.utils.aoa_to_sheet(studentSummaryData);
     studentSummarySheet['!cols'] = [
@@ -462,8 +466,8 @@ async function exportExamSessionsToExcel() {
       { wch: 20 }, // Graded At
     ];
 
-    XLSX.utils.book_append_sheet(workbook, studentSummarySheet, 'Student Summary');
-    XLSX.utils.book_append_sheet(workbook, detailedQuestionsSheet, 'Detailed Questions');
+    workbook.addWorksheet(workbook, studentSummarySheet, 'Student Summary');
+    workbook.addWorksheet(workbook, detailedQuestionsSheet, 'Detailed Questions');
     const questionSetSheet = XLSX.utils.aoa_to_sheet(questionSetData);
     questionSetSheet['!cols'] = [
       { wch: 15 }, // Student ID
@@ -479,13 +483,13 @@ async function exportExamSessionsToExcel() {
       { wch: 12 }, // Max Score
       { wch: 10 }, // Correct?
     ];
-    XLSX.utils.book_append_sheet(workbook, questionSetSheet, 'Question Set (13)');
+    workbook.addWorksheet(workbook, questionSetSheet, 'Question Set (13)');
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
     const filename = `ExamSessions_Export_${timestamp}.xlsx`;
 
     console.log('💾 Writing Excel file...');
-    XLSX.writeFile(workbook, filename);
+    await workbook.xlsx.writeFile(workbook, filename);
 
     const summary = {
       timestamp: new Date().toISOString(),

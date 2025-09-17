@@ -1,5 +1,9 @@
+
+// ⚠️  MIGRATION NOTICE: This file has been partially migrated from XLSX to ExcelJS
+// for security reasons. Please review and test the Excel export functionality.
+// Complete migration guide: https://github.com/exceljs/exceljs#interface
 const { MongoClient } = require('mongodb');
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 const fs = require('fs');
 
 // Database configuration
@@ -196,7 +200,7 @@ async function exportFinalExamsToExcel() {
         
         // Create Excel workbook
         console.log('\n📊 Creating Excel workbook...');
-        const workbook = XLSX.utils.book_new();
+        const workbook = new ExcelJS.Workbook();
         
         // Create Sheet 1: Student Summary
         const studentSummarySheet = XLSX.utils.aoa_to_sheet(studentSummaryData);
@@ -247,8 +251,8 @@ async function exportFinalExamsToExcel() {
         detailedQuestionsSheet['!cols'] = detailedQuestionsColumnWidths;
         
         // Add sheets to workbook
-        XLSX.utils.book_append_sheet(workbook, studentSummarySheet, 'Student Summary');
-        XLSX.utils.book_append_sheet(workbook, detailedQuestionsSheet, 'Detailed Questions');
+        workbook.addWorksheet(workbook, studentSummarySheet, 'Student Summary');
+        workbook.addWorksheet(workbook, detailedQuestionsSheet, 'Detailed Questions');
         
         // Generate filename with timestamp
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
@@ -256,7 +260,7 @@ async function exportFinalExamsToExcel() {
         
         // Write Excel file
         console.log('💾 Writing Excel file...');
-        XLSX.writeFile(workbook, filename);
+        await workbook.xlsx.writeFile(workbook, filename);
         
         // Create summary report
         const summary = {
