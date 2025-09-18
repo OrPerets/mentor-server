@@ -2374,6 +2374,81 @@ module.exports = {
             hasCorrectAnswer: !!(q.solution_example && q.solution_example.trim() !== ''),
             approved: q.approved || false
         }));
+    },
+
+    // Weekly Content Management Functions
+    getWeeklyContent: async () => {
+        const db = await getDatabase();
+        const content = await db.collection("weekly_content").find({}).sort({ week: 1 }).toArray();
+        return content;
+    },
+
+    setWeeklyContent: async (weekData) => {
+        const db = await getDatabase();
+        const result = await db.collection("weekly_content").replaceOne(
+            { week: weekData.week },
+            {
+                ...weekData,
+                updatedAt: new Date()
+            },
+            { upsert: true }
+        );
+        return { success: true, modifiedCount: result.modifiedCount, upsertedCount: result.upsertedCount };
+    },
+
+    getCurrentWeekContent: async (semesterStartDate = null) => {
+        const db = await getDatabase();
+        const now = new Date();
+        
+        // If no semester start date provided, try to get it from database or use default
+        let start;
+        if (semesterStartDate) {
+            start = new Date(semesterStartDate);
+        } else {
+            // Try to get semester start from database, or use a default fallback
+            const semesterConfig = await db.collection("semester_config").findOne({});
+            if (semesterConfig && semesterConfig.startDate) {
+                start = new Date(semesterConfig.startDate);
+            } else {
+                // Default fallback: assume semester started 8 weeks ago (middle of semester)
+                start = new Date(now.getTime() - (8 * 7 * 24 * 60 * 60 * 1000));
+            }
+        }
+        
+        const weekNumber = Math.ceil((now - start) / (7 * 24 * 60 * 60 * 1000));
+        
+        // Ensure week is within 1-14 range
+        const clampedWeek = Math.max(1, Math.min(14, weekNumber));
+        
+        const content = await db.collection("weekly_content").findOne({ week: clampedWeek });
+        
+        return { 
+            currentWeek: clampedWeek, 
+            content: content?.content || '', 
+            dateRange: content?.dateRange || '',
+            semesterStart: start,
+            isDefaultWeek: clampedWeek !== weekNumber
+        };
+    },
+
+    setSemesterStartDate: async (startDate) => {
+        const db = await getDatabase();
+        await db.collection("semester_config").replaceOne(
+            { type: 'semester_start' },
+            { 
+                type: 'semester_start',
+                startDate: new Date(startDate),
+                updatedAt: new Date()
+            },
+            { upsert: true }
+        );
+        return { success: true };
+    },
+
+    getSemesterStartDate: async () => {
+        const db = await getDatabase();
+        const config = await db.collection("semester_config").findOne({ type: 'semester_start' });
+        return config?.startDate || null;
     }
 };
 
