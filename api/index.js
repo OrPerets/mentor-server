@@ -437,6 +437,76 @@ app.post("/practice/submit", async (req, res) => {
   }
 });
 
+// Weekly Content Management Routes
+app.get("/weekly-content", async (req, res) => {
+  try {
+    const content = await DB.getWeeklyContent();
+    res.json(content);
+  } catch (error) {
+    console.error('Error fetching weekly content:', error);
+    res.status(500).json({ error: 'Failed to fetch weekly content' });
+  }
+});
+
+app.post("/weekly-content", async (req, res) => {
+  try {
+    const { week, content, dateRange, updatedBy } = req.body;
+    
+    if (!week || week < 1 || week > 14) {
+      return res.status(400).json({ error: 'Week must be between 1 and 14' });
+    }
+    
+    const result = await DB.setWeeklyContent({
+      week,
+      content: content || '',
+      dateRange: dateRange || '',
+      updatedBy: updatedBy || 'admin'
+    });
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Error saving weekly content:', error);
+    res.status(500).json({ error: 'Failed to save weekly content' });
+  }
+});
+
+app.get("/weekly-content/current", async (req, res) => {
+  try {
+    const semesterStart = req.query.semesterStart;
+    const currentWeek = await DB.getCurrentWeekContent(semesterStart);
+    res.json(currentWeek);
+  } catch (error) {
+    console.error('Error fetching current week content:', error);
+    res.status(500).json({ error: 'Failed to fetch current week content' });
+  }
+});
+
+app.post("/semester-start", async (req, res) => {
+  try {
+    const { startDate } = req.body;
+    
+    if (!startDate) {
+      return res.status(400).json({ error: 'Start date is required' });
+    }
+    
+    const result = await DB.setSemesterStartDate(startDate);
+    res.json(result);
+  } catch (error) {
+    console.error('Error setting semester start date:', error);
+    res.status(500).json({ error: 'Failed to set semester start date' });
+  }
+});
+
+app.get("/semester-start", async (req, res) => {
+  try {
+    const startDate = await DB.getSemesterStartDate();
+    res.json({ startDate });
+  } catch (error) {
+    console.error('Error fetching semester start date:', error);
+    res.status(500).json({ error: 'Failed to fetch semester start date' });
+  }
+});
+
 app.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
   console.log(`🌐 Server URL: http://localhost:${port}`);
