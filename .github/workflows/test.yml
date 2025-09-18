@@ -75,23 +75,37 @@ jobs:
       run: npm ci
     
     - name: Run security audit for production dependencies only
-      run: npm audit --production --audit-level=high
-      continue-on-error: true
-      
-    - name: Check for critical vulnerabilities
       run: |
-        # Only fail on high/critical vulnerabilities in production dependencies
-        AUDIT_RESULT=$(npm audit --production --audit-level=high --json 2>/dev/null || echo '{"vulnerabilities":{}}')
-        HIGH_VULNS=$(echo "$AUDIT_RESULT" | jq '.metadata.vulnerabilities.high // 0')
-        CRITICAL_VULNS=$(echo "$AUDIT_RESULT" | jq '.metadata.vulnerabilities.critical // 0')
+        echo "🔍 Checking production dependencies for high/critical vulnerabilities..."
         
-        echo "High vulnerabilities: $HIGH_VULNS"
-        echo "Critical vulnerabilities: $CRITICAL_VULNS"
-        
-        if [ "$HIGH_VULNS" -gt 0 ] || [ "$CRITICAL_VULNS" -gt 0 ]; then
-          echo "❌ Found high/critical vulnerabilities in production dependencies"
-          npm audit --production --audit-level=high
-          exit 1
-        else
+        # Use --omit=dev instead of --production (recommended)
+        if npm audit --omit=dev --audit-level=high; then
           echo "✅ No high/critical vulnerabilities in production dependencies"
+        else
+          echo "⚠️ Found vulnerabilities, checking severity..."
+          
+          # Get detailed audit info
+          AUDIT_RESULT=$(npm audit --omit=dev --audit-level=high --json 2>/dev/null || echo '{"vulnerabilities":{}}')
+          
+          # Extract vulnerability counts (handle missing jq gracefully)
+          if command -v jq >/dev/null 2>&1; then
+            HIGH_VULNS=$(echo "$AUDIT_RESULT" | jq '.metadata.vulnerabilities.high // 0' 2>/dev/null || echo "0")
+            CRITICAL_VULNS=$(echo "$AUDIT_RESULT" | jq '.metadata.vulnerabilities.critical // 0' 2>/dev/null || echo "0")
+          else
+            # Fallback without jq
+            HIGH_VULNS=$(echo "$AUDIT_RESULT" | grep -o '"high":[0-9]*' | cut -d: -f2 || echo "0")
+            CRITICAL_VULNS=$(echo "$AUDIT_RESULT" | grep -o '"critical":[0-9]*' | cut -d: -f2 || echo "0")
+          fi
+          
+          echo "High vulnerabilities: $HIGH_VULNS"
+          echo "Critical vulnerabilities: $CRITICAL_VULNS"
+          
+          # Only fail on actual high/critical vulnerabilities
+          if [ "$HIGH_VULNS" -gt 0 ] || [ "$CRITICAL_VULNS" -gt 0 ]; then
+            echo "❌ Found high/critical vulnerabilities in production dependencies"
+            npm audit --omit=dev --audit-level=high
+            exit 1
+          else
+            echo "✅ No high/critical vulnerabilities in production dependencies"
+          fi
         fi

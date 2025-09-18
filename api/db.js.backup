@@ -343,12 +343,7 @@ module.exports = {
         return exercises.filter(exercise => !answeredExercises.includes(exercise.id));
     },
 
-    // NOTE: Exam-related functions have been removed as part of Sprint 0 teardown.
-    // Functions removed: createExamSession, getExamSession, saveExamAnswer, getAllFinalExams, etc.
-    // The Full Homework Exercise module will be rebuilt in future sprints.
-    // Practice functionality remains intact below.
-
-    // Exam-related functions (REMOVED)
+    // Exam-related functions
     createExamSession: async (studentEmail, examTitle = 'SQL Exam', studentId = null, studentName = null, clientIp = null, browserFingerprint = null) => {
         const db = await getDatabase();
         
