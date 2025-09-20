@@ -221,7 +221,7 @@ module.exports = {
         };
         const db = await getDatabase();
         const result = await db.collection("chatSessions").insertOne(session);
-        return { id: result.insertedId, ...session };
+        return { _id: result.insertedId, ...session };
     },
     
     getCoinsBalance: async (userEmail) => {
@@ -256,8 +256,9 @@ module.exports = {
     },
     
     getChatMessages: async (chatId) => {
+        const { ObjectId } = require('mongodb');
         const db = await getDatabase();
-        const messages = await db.collection("chatMessages").find({ chatId }).toArray();
+        const messages = await db.collection("chatMessages").find({ chatId: new ObjectId(chatId) }).toArray();
         return messages;
     },
     
@@ -268,8 +269,9 @@ module.exports = {
     },
     
     saveChatMessage: async (chatId, role, text) => {
+        const { ObjectId } = require('mongodb');
         const message = {
-            chatId,
+            chatId: new ObjectId(chatId),
             role,
             text,
             timestamp: new Date()
@@ -277,7 +279,7 @@ module.exports = {
         const db = await getDatabase();
         await db.collection("chatMessages").insertOne(message);
         await db.collection("chatSessions").updateOne(
-            { _id: chatId },
+            { _id: new ObjectId(chatId) },
             { $set: { lastMessageTimestamp: new Date() } }
         );
         return message;
