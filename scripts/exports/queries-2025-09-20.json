@@ -1,0 +1,662 @@
+[
+  {
+    "_id": "68b28ef7c26ab35a2b04f240",
+    "practiceId": "תרגול 12",
+    "table": "Facebook",
+    "question": "הצג את כל הרשומות מטבלה Facebook.",
+    "answerSql": "SELECT * FROM Facebook;",
+    "createdAt": "2025-08-30T05:41:11.367Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:11.367Z"
+  },
+  {
+    "_id": "68b28ef7c26ab35a2b04f241",
+    "practiceId": "תרגול 12",
+    "question": "כמה רשומות יש בטבלה Facebook?",
+    "table": "Facebook",
+    "answerSql": "SELECT COUNT(*) AS total FROM Facebook;",
+    "createdAt": "2025-08-30T05:41:11.430Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:11.430Z"
+  },
+  {
+    "_id": "68b28ef7c26ab35a2b04f242",
+    "question": "הצג את 10 הרשומות הראשונות בהן FirstName אינו ריק, ממוין לפי FirstName.",
+    "table": "Facebook",
+    "practiceId": "תרגול 12",
+    "answerSql": "SELECT * FROM Facebook WHERE FirstName IS NOT NULL ORDER BY FirstName ASC;",
+    "createdAt": "2025-08-30T05:41:11.493Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:11.493Z"
+  },
+  {
+    "_id": "68b28ef7c26ab35a2b04f243",
+    "practiceId": "תרגול 12",
+    "table": "Facebook",
+    "question": "מצא רשומות בהן ID > 100.",
+    "answerSql": "SELECT * FROM Facebook WHERE ID > 100;",
+    "createdAt": "2025-08-30T05:41:11.558Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:41:11.558Z"
+  },
+  {
+    "_id": "68b28ef7c26ab35a2b04f244",
+    "question": "מצא רשומות בהן FirstName מתחיל באות 'A'.",
+    "table": "Facebook",
+    "practiceId": "תרגול 12",
+    "answerSql": "SELECT * FROM Facebook WHERE FirstName LIKE 'A%';",
+    "createdAt": "2025-08-30T05:41:11.624Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:41:11.624Z"
+  },
+  {
+    "_id": "68b28ef7c26ab35a2b04f246",
+    "question": "הצג את כל הרשומות מטבלה Applicant.",
+    "table": "Applicant",
+    "practiceId": "תרגול 13",
+    "answerSql": "SELECT * FROM Applicant;",
+    "createdAt": "2025-08-30T05:41:11.754Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:11.754Z"
+  },
+  {
+    "_id": "68b28ef7c26ab35a2b04f247",
+    "practiceId": "תרגול 13",
+    "table": "Applicant",
+    "question": "כמה רשומות יש בטבלה Applicant?",
+    "answerSql": "SELECT COUNT(*) AS total FROM Applicant;",
+    "createdAt": "2025-08-30T05:41:11.821Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:11.821Z"
+  },
+  {
+    "_id": "68b28ef8c26ab35a2b04f248",
+    "practiceId": "תרגול 13",
+    "question": "הצג את 10 הרשומות הראשונות בהן a_name אינו ריק, ממוין לפי a_name.",
+    "table": "Applicant",
+    "answerSql": "SELECT * FROM Applicant WHERE a_name IS NOT NULL ORDER BY a_name ASC;",
+    "createdAt": "2025-08-30T05:41:11.886Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:11.886Z"
+  },
+  {
+    "_id": "68b28ef8c26ab35a2b04f249",
+    "practiceId": "תרגול 13",
+    "table": "Applicant",
+    "question": "מצא רשומות בהן a_id > 100.",
+    "answerSql": "SELECT * FROM Applicant WHERE a_id > 100;",
+    "createdAt": "2025-08-30T05:41:11.951Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:41:11.951Z"
+  },
+  {
+    "_id": "68b28ef8c26ab35a2b04f24a",
+    "practiceId": "תרגול 13",
+    "question": "מצא רשומות בהן a_name מתחיל באות 'A'.",
+    "table": "Applicant",
+    "answerSql": "SELECT * FROM Applicant WHERE a_name LIKE 'A%';",
+    "createdAt": "2025-08-30T05:41:12.017Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:41:12.017Z"
+  },
+  {
+    "_id": "68b28ef8c26ab35a2b04f24c",
+    "practiceId": "תרגול 13",
+    "question": "הצג את כל הרשומות מטבלה Jobs.",
+    "table": "Jobs",
+    "answerSql": "SELECT * FROM Jobs;",
+    "createdAt": "2025-08-30T05:41:12.149Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:12.149Z"
+  },
+  {
+    "_id": "68b28ef8c26ab35a2b04f24d",
+    "practiceId": "תרגול 13",
+    "table": "Jobs",
+    "question": "כמה רשומות יש בטבלה Jobs?",
+    "answerSql": "SELECT COUNT(*) AS total FROM Jobs;",
+    "createdAt": "2025-08-30T05:41:12.215Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:12.215Z"
+  },
+  {
+    "_id": "68b28ef8c26ab35a2b04f24e",
+    "question": "הצג את 10 הרשומות הראשונות בהן Job_name אינו ריק, ממוין לפי Job_name.",
+    "table": "Jobs",
+    "practiceId": "תרגול 13",
+    "answerSql": "SELECT * FROM Jobs WHERE Job_name IS NOT NULL ORDER BY Job_name ASC;",
+    "createdAt": "2025-08-30T05:41:12.279Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:12.279Z"
+  },
+  {
+    "_id": "68b28ef8c26ab35a2b04f24f",
+    "practiceId": "תרגול 13",
+    "table": "Jobs",
+    "question": "מצא רשומות בהן job_no > 30.",
+    "answerSql": "SELECT * FROM Jobs WHERE job_no > 30;",
+    "createdAt": "2025-08-30T05:41:12.348Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:41:12.348Z"
+  },
+  {
+    "_id": "68b28ef8c26ab35a2b04f250",
+    "question": "מצא רשומות בהן Job_name מתחיל באות 'A'.",
+    "practiceId": "תרגול 13",
+    "table": "Jobs",
+    "answerSql": "SELECT * FROM Jobs WHERE Job_name LIKE 'A%';",
+    "createdAt": "2025-08-30T05:41:12.420Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:41:12.420Z"
+  },
+  {
+    "_id": "68b28ef8c26ab35a2b04f252",
+    "practiceId": "תרגול 13",
+    "table": "Qualified",
+    "question": "הצג את כל הרשומות מטבלה Qualified.",
+    "answerSql": "SELECT * FROM Qualified;",
+    "createdAt": "2025-08-30T05:41:12.565Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:12.565Z"
+  },
+  {
+    "_id": "68b28ef8c26ab35a2b04f253",
+    "practiceId": "תרגול 13",
+    "table": "Qualified",
+    "question": "כמה רשומות יש בטבלה Qualified?",
+    "answerSql": "SELECT COUNT(*) AS total FROM Qualified;",
+    "createdAt": "2025-08-30T05:41:12.629Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:12.629Z"
+  },
+  {
+    "_id": "68b28ef8c26ab35a2b04f254",
+    "question": "Return the first 10 rows ממוין לפי העמודה הראשונה.",
+    "table": "Qualified",
+    "practiceId": "תרגול 13",
+    "answerSql": "SELECT * FROM Qualified ORDER BY a_id ASC;",
+    "createdAt": "2025-08-30T05:41:12.693Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:12.693Z"
+  },
+  {
+    "_id": "68b28ef8c26ab35a2b04f255",
+    "practiceId": "תרגול 13",
+    "table": "Qualified",
+    "question": "מצא רשומות בהן a_id > 100.",
+    "answerSql": "SELECT * FROM Qualified WHERE a_id > 100;",
+    "createdAt": "2025-08-30T05:41:12.757Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:41:12.757Z"
+  },
+  {
+    "_id": "68b28ef9c26ab35a2b04f257",
+    "question": "הצג את כל הרשומות מטבלה Wishes.",
+    "table": "Wishes",
+    "practiceId": "תרגול 13",
+    "answerSql": "SELECT * FROM Wishes;",
+    "createdAt": "2025-08-30T05:41:12.887Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:12.887Z"
+  },
+  {
+    "_id": "68b28ef9c26ab35a2b04f258",
+    "practiceId": "תרגול 13",
+    "table": "Wishes",
+    "question": "כמה רשומות יש בטבלה Wishes?",
+    "answerSql": "SELECT COUNT(*) AS total FROM Wishes;",
+    "createdAt": "2025-08-30T05:41:12.952Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:12.952Z"
+  },
+  {
+    "_id": "68b28ef9c26ab35a2b04f259",
+    "question": "Return the first 10 rows ממוין לפי העמודה הראשונה.",
+    "table": "Wishes",
+    "practiceId": "תרגול 13",
+    "answerSql": "SELECT * FROM Wishes ORDER BY a_id ASC;",
+    "createdAt": "2025-08-30T05:41:13.019Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:13.019Z"
+  },
+  {
+    "_id": "68b28ef9c26ab35a2b04f25a",
+    "question": "מצא רשומות בהן a_id > 100.",
+    "table": "Wishes",
+    "practiceId": "תרגול 13",
+    "answerSql": "SELECT * FROM Wishes WHERE a_id > 100;",
+    "createdAt": "2025-08-30T05:41:13.084Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:41:13.084Z"
+  },
+  {
+    "_id": "68b28ef9c26ab35a2b04f25c",
+    "question": "הצג את כל הרשומות מטבלה BankClients.",
+    "table": "BankClients",
+    "practiceId": "תרגול 14",
+    "answerSql": "SELECT * FROM BankClients;",
+    "createdAt": "2025-08-30T05:41:13.215Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:13.215Z"
+  },
+  {
+    "_id": "68b28ef9c26ab35a2b04f25d",
+    "question": "כמה רשומות יש בטבלה BankClients?",
+    "table": "BankClients",
+    "practiceId": "תרגול 14",
+    "answerSql": "SELECT COUNT(*) AS total FROM BankClients;",
+    "createdAt": "2025-08-30T05:41:13.280Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:13.280Z"
+  },
+  {
+    "_id": "68b28ef9c26ab35a2b04f25e",
+    "practiceId": "תרגול 14",
+    "question": "הצג את 10 הרשומות הראשונות בהן name אינו ריק, ממוין לפי name.",
+    "table": "BankClients",
+    "answerSql": "SELECT * FROM BankClients WHERE name IS NOT NULL ORDER BY name ASC;",
+    "createdAt": "2025-08-30T05:41:13.344Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:13.344Z"
+  },
+  {
+    "_id": "68b28ef9c26ab35a2b04f25f",
+    "question": "מצא רשומות בהן id > 100.",
+    "practiceId": "תרגול 14",
+    "table": "BankClients",
+    "answerSql": "SELECT * FROM BankClients WHERE id > 100;",
+    "createdAt": "2025-08-30T05:41:13.409Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:41:13.409Z"
+  },
+  {
+    "_id": "68b28ef9c26ab35a2b04f260",
+    "question": "מצא רשומות בהן name מתחיל באות 'A'.",
+    "practiceId": "תרגול 14",
+    "table": "BankClients",
+    "answerSql": "SELECT * FROM BankClients WHERE name LIKE 'A%';",
+    "createdAt": "2025-08-30T05:41:13.472Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:41:13.472Z"
+  },
+  {
+    "_id": "68b28ef9c26ab35a2b04f262",
+    "practiceId": "תרגול 14",
+    "table": "BankAccounts",
+    "question": "הצג את כל הרשומות מטבלה BankAccounts.",
+    "answerSql": "SELECT * FROM BankAccounts;",
+    "createdAt": "2025-08-30T05:41:13.602Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:13.602Z"
+  },
+  {
+    "_id": "68b28ef9c26ab35a2b04f263",
+    "practiceId": "תרגול 14",
+    "table": "BankAccounts",
+    "question": "כמה רשומות יש בטבלה BankAccounts?",
+    "answerSql": "SELECT COUNT(*) AS total FROM BankAccounts;",
+    "createdAt": "2025-08-30T05:41:13.667Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:13.667Z"
+  },
+  {
+    "_id": "68b28ef9c26ab35a2b04f264",
+    "practiceId": "תרגול 14",
+    "question": "הצג את 10 הרשומות הראשונות בהן type אינו ריק, ממוין לפי type.",
+    "table": "BankAccounts",
+    "answerSql": "SELECT * FROM BankAccounts WHERE type IS NOT NULL ORDER BY type ASC;",
+    "createdAt": "2025-08-30T05:41:13.730Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:13.730Z"
+  },
+  {
+    "_id": "68b28ef9c26ab35a2b04f265",
+    "question": "מצא רשומות בהן account > 30.",
+    "table": "BankAccounts",
+    "practiceId": "תרגול 14",
+    "answerSql": "SELECT * FROM BankAccounts WHERE account > 30;",
+    "createdAt": "2025-08-30T05:41:13.797Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:41:13.797Z"
+  },
+  {
+    "_id": "68b28ef9c26ab35a2b04f266",
+    "question": "מצא רשומות בהן type מתחיל באות 'A'.",
+    "practiceId": "תרגול 14",
+    "table": "BankAccounts",
+    "answerSql": "SELECT * FROM BankAccounts WHERE type LIKE 'A%';",
+    "createdAt": "2025-08-30T05:41:13.860Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:41:13.860Z"
+  },
+  {
+    "_id": "68b28efac26ab35a2b04f268",
+    "practiceId": "תרגול 15",
+    "question": "הצג את כל הרשומות מטבלה Friends.",
+    "table": "Friends",
+    "answerSql": "SELECT * FROM Friends;",
+    "createdAt": "2025-08-30T05:41:14.000Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:14.000Z"
+  },
+  {
+    "_id": "68b28efac26ab35a2b04f269",
+    "question": "כמה רשומות יש בטבלה Friends?",
+    "table": "Friends",
+    "practiceId": "תרגול 15",
+    "answerSql": "SELECT COUNT(*) AS total FROM Friends;",
+    "createdAt": "2025-08-30T05:41:14.065Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:14.065Z"
+  },
+  {
+    "_id": "68b28efac26ab35a2b04f26a",
+    "question": "הצג את 10 הרשומות הראשונות בהן Email אינו ריק, ממוין לפי Email.",
+    "table": "Friends",
+    "practiceId": "תרגול 15",
+    "answerSql": "SELECT * FROM Friends WHERE Email IS NOT NULL ORDER BY Email ASC;",
+    "createdAt": "2025-08-30T05:41:14.129Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:14.129Z"
+  },
+  {
+    "_id": "68b28efac26ab35a2b04f26b",
+    "question": "מצא רשומות בהן NumberOfFriends > 30.",
+    "practiceId": "תרגול 15",
+    "table": "Friends",
+    "answerSql": "SELECT * FROM Friends WHERE NumberOfFriends > 30;",
+    "createdAt": "2025-08-30T05:41:14.194Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:41:14.193Z"
+  },
+  {
+    "_id": "68b28efac26ab35a2b04f26c",
+    "practiceId": "תרגול 15",
+    "question": "הצג את 10 הרשומות העדכניות ביותר לפי BirthDate.",
+    "table": "Friends",
+    "answerSql": "SELECT * FROM Friends WHERE BirthDate IS NOT NULL ORDER BY BirthDate DESC;",
+    "createdAt": "2025-08-30T05:41:14.259Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:41:14.259Z"
+  },
+  {
+    "_id": "68b28efac26ab35a2b04f26e",
+    "practiceId": "תרגול 15",
+    "question": "הצג את כל הרשומות מטבלה Events.",
+    "table": "Events",
+    "answerSql": "SELECT * FROM Events;",
+    "createdAt": "2025-08-30T05:41:14.389Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:14.389Z"
+  },
+  {
+    "_id": "68b28efac26ab35a2b04f26f",
+    "practiceId": "תרגול 15",
+    "table": "Events",
+    "question": "כמה רשומות יש בטבלה Events?",
+    "answerSql": "SELECT COUNT(*) AS total FROM Events;",
+    "createdAt": "2025-08-30T05:41:14.455Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:14.455Z"
+  },
+  {
+    "_id": "68b28efac26ab35a2b04f270",
+    "question": "הצג את 10 הרשומות הראשונות בהן Name אינו ריק, ממוין לפי Name.",
+    "practiceId": "תרגול 15",
+    "table": "Events",
+    "answerSql": "SELECT * FROM Events WHERE Name IS NOT NULL ORDER BY Name ASC;",
+    "createdAt": "2025-08-30T05:41:14.519Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:14.519Z"
+  },
+  {
+    "_id": "68b28efac26ab35a2b04f271",
+    "practiceId": "תרגול 15",
+    "question": "מצא רשומות בהן Num > 30.",
+    "table": "Events",
+    "answerSql": "SELECT * FROM Events WHERE Num > 30;",
+    "createdAt": "2025-08-30T05:41:14.585Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:41:14.585Z"
+  },
+  {
+    "_id": "68b28efac26ab35a2b04f272",
+    "question": "הצג את 10 הרשומות העדכניות ביותר לפי Event_Date.",
+    "practiceId": "תרגול 15",
+    "table": "Events",
+    "answerSql": "SELECT * FROM Events WHERE Event_Date IS NOT NULL ORDER BY Event_Date DESC;",
+    "createdAt": "2025-08-30T05:41:14.649Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:41:14.649Z"
+  },
+  {
+    "_id": "68b28efac26ab35a2b04f274",
+    "question": "הצג את כל הרשומות מטבלה Students.",
+    "table": "Students",
+    "practiceId": "תרגול 16",
+    "answerSql": "SELECT * FROM Students;",
+    "createdAt": "2025-08-30T05:41:14.780Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:14.780Z"
+  },
+  {
+    "_id": "68b28efac26ab35a2b04f275",
+    "practiceId": "תרגול 16",
+    "table": "Students",
+    "question": "כמה רשומות יש בטבלה Students?",
+    "answerSql": "SELECT COUNT(*) AS total FROM Students;",
+    "createdAt": "2025-08-30T05:41:14.846Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:14.846Z"
+  },
+  {
+    "_id": "68b28efbc26ab35a2b04f276",
+    "practiceId": "תרגול 16",
+    "table": "Students",
+    "question": "הצג את 10 הרשומות הראשונות בהן FirstName אינו ריק, ממוין לפי FirstName.",
+    "answerSql": "SELECT * FROM Students WHERE FirstName IS NOT NULL ORDER BY FirstName ASC;",
+    "createdAt": "2025-08-30T05:41:14.911Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:14.911Z"
+  },
+  {
+    "_id": "68b28efbc26ab35a2b04f277",
+    "question": "מצא רשומות בהן StudentID > 100.",
+    "practiceId": "תרגול 16",
+    "table": "Students",
+    "answerSql": "SELECT * FROM Students WHERE StudentID > 100;",
+    "createdAt": "2025-08-30T05:41:14.976Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:41:14.976Z"
+  },
+  {
+    "_id": "68b28efbc26ab35a2b04f278",
+    "question": "מצא רשומות בהן FirstName מתחיל באות 'A'.",
+    "table": "Students",
+    "practiceId": "תרגול 16",
+    "answerSql": "SELECT * FROM Students WHERE FirstName LIKE 'A%';",
+    "createdAt": "2025-08-30T05:41:15.042Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:41:15.042Z"
+  },
+  {
+    "_id": "68b28efbc26ab35a2b04f27a",
+    "practiceId": "תרגול 16",
+    "table": "Courses",
+    "question": "הצג את כל הרשומות מטבלה Courses.",
+    "answerSql": "SELECT * FROM Courses;",
+    "createdAt": "2025-08-30T05:41:15.176Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:15.176Z"
+  },
+  {
+    "_id": "68b28efbc26ab35a2b04f27b",
+    "question": "כמה רשומות יש בטבלה Courses?",
+    "table": "Courses",
+    "practiceId": "תרגול 16",
+    "answerSql": "SELECT COUNT(*) AS total FROM Courses;",
+    "createdAt": "2025-08-30T05:41:15.244Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:15.244Z"
+  },
+  {
+    "_id": "68b28efbc26ab35a2b04f27c",
+    "practiceId": "תרגול 16",
+    "table": "Courses",
+    "question": "הצג את 10 הרשומות הראשונות בהן CourseName אינו ריק, ממוין לפי CourseName.",
+    "answerSql": "SELECT * FROM Courses WHERE CourseName IS NOT NULL ORDER BY CourseName ASC;",
+    "createdAt": "2025-08-30T05:41:15.311Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:41:15.311Z"
+  },
+  {
+    "_id": "68b28efbc26ab35a2b04f27d",
+    "practiceId": "תרגול 16",
+    "question": "מצא רשומות בהן StudentID > 100.",
+    "table": "Courses",
+    "answerSql": "SELECT * FROM Courses WHERE StudentID > 100;",
+    "createdAt": "2025-08-30T05:41:15.376Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:41:15.376Z"
+  },
+  {
+    "_id": "68b28efbc26ab35a2b04f27e",
+    "practiceId": "תרגול 16",
+    "table": "Courses",
+    "question": "מצא רשומות בהן CourseName מתחיל באות 'A'.",
+    "answerSql": "SELECT * FROM Courses WHERE CourseName LIKE 'A%';",
+    "createdAt": "2025-08-30T05:41:15.444Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:41:15.443Z"
+  },
+  {
+    "_id": "68b2920bc26ab35a2b04f282",
+    "practiceId": "תרגול 12",
+    "table": "Facebook",
+    "question": "מצא רשומות בהן ID גדול מ-100.",
+    "answerSql": "SELECT * FROM Facebook WHERE ID > 100;",
+    "createdAt": "2025-08-30T05:54:19.388Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:54:19.388Z"
+  },
+  {
+    "_id": "68b2920bc26ab35a2b04f287",
+    "question": "מצא רשומות בהן a_id גדול מ-100.",
+    "practiceId": "תרגול 13",
+    "table": "Applicant",
+    "answerSql": "SELECT * FROM Applicant WHERE a_id > 100;",
+    "createdAt": "2025-08-30T05:54:19.749Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:54:19.749Z"
+  },
+  {
+    "_id": "68b2920cc26ab35a2b04f28c",
+    "question": "מצא רשומות בהן job_no גדול מ-30.",
+    "practiceId": "תרגול 13",
+    "table": "Jobs",
+    "answerSql": "SELECT * FROM Jobs WHERE job_no > 30;",
+    "createdAt": "2025-08-30T05:54:20.120Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:54:20.120Z"
+  },
+  {
+    "_id": "68b2920cc26ab35a2b04f290",
+    "practiceId": "תרגול 13",
+    "table": "Qualified",
+    "question": "הצג את 10 הרשומות הראשונות ממוין לפי העמודה הראשונה.",
+    "answerSql": "SELECT * FROM Qualified ORDER BY a_id ASC;",
+    "createdAt": "2025-08-30T05:54:20.423Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:54:20.423Z"
+  },
+  {
+    "_id": "68b2920cc26ab35a2b04f291",
+    "practiceId": "תרגול 13",
+    "question": "מצא רשומות בהן a_id גדול מ-100.",
+    "table": "Qualified",
+    "answerSql": "SELECT * FROM Qualified WHERE a_id > 100;",
+    "createdAt": "2025-08-30T05:54:20.482Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:54:20.482Z"
+  },
+  {
+    "_id": "68b2920cc26ab35a2b04f294",
+    "practiceId": "תרגול 13",
+    "question": "הצג את 10 הרשומות הראשונות ממוין לפי העמודה הראשונה.",
+    "table": "Wishes",
+    "answerSql": "SELECT * FROM Wishes ORDER BY a_id ASC;",
+    "createdAt": "2025-08-30T05:54:20.725Z",
+    "difficulty": "easy",
+    "updatedAt": "2025-08-30T05:54:20.725Z"
+  },
+  {
+    "_id": "68b2920cc26ab35a2b04f295",
+    "practiceId": "תרגול 13",
+    "question": "מצא רשומות בהן a_id גדול מ-100.",
+    "table": "Wishes",
+    "answerSql": "SELECT * FROM Wishes WHERE a_id > 100;",
+    "createdAt": "2025-08-30T05:54:20.785Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:54:20.785Z"
+  },
+  {
+    "_id": "68b2920dc26ab35a2b04f299",
+    "question": "מצא רשומות בהן id גדול מ-100.",
+    "table": "BankClients",
+    "practiceId": "תרגול 14",
+    "answerSql": "SELECT * FROM BankClients WHERE id > 100;",
+    "createdAt": "2025-08-30T05:54:21.089Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:54:21.089Z"
+  },
+  {
+    "_id": "68b2920dc26ab35a2b04f29e",
+    "question": "מצא רשומות בהן account גדול מ-30.",
+    "practiceId": "תרגול 14",
+    "table": "BankAccounts",
+    "answerSql": "SELECT * FROM BankAccounts WHERE account > 30;",
+    "createdAt": "2025-08-30T05:54:21.447Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:54:21.447Z"
+  },
+  {
+    "_id": "68b2920dc26ab35a2b04f2a3",
+    "question": "מצא רשומות בהן NumberOfFriends גדול מ-30.",
+    "practiceId": "תרגול 15",
+    "table": "Friends",
+    "answerSql": "SELECT * FROM Friends WHERE NumberOfFriends > 30;",
+    "createdAt": "2025-08-30T05:54:21.809Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:54:21.808Z"
+  },
+  {
+    "_id": "68b2920ec26ab35a2b04f2a8",
+    "practiceId": "תרגול 15",
+    "table": "Events",
+    "question": "מצא רשומות בהן Num גדול מ-30.",
+    "answerSql": "SELECT * FROM Events WHERE Num > 30;",
+    "createdAt": "2025-08-30T05:54:22.170Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:54:22.170Z"
+  },
+  {
+    "_id": "68b2920ec26ab35a2b04f2ad",
+    "practiceId": "תרגול 16",
+    "question": "מצא רשומות בהן StudentID גדול מ-100.",
+    "table": "Students",
+    "answerSql": "SELECT * FROM Students WHERE StudentID > 100;",
+    "createdAt": "2025-08-30T05:54:22.544Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:54:22.544Z"
+  },
+  {
+    "_id": "68b2920fc26ab35a2b04f2b2",
+    "practiceId": "תרגול 16",
+    "table": "Courses",
+    "question": "מצא רשומות בהן StudentID גדול מ-100.",
+    "answerSql": "SELECT * FROM Courses WHERE StudentID > 100;",
+    "createdAt": "2025-08-30T05:54:22.910Z",
+    "difficulty": "medium",
+    "updatedAt": "2025-08-30T05:54:22.910Z"
+  }
+]

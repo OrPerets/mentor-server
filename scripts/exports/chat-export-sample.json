@@ -1,0 +1,35 @@
+{
+  "exportDate": "2025-09-20T06:45:19.250Z",
+  "note": "This is a sample export showing the data structure",
+  "totalSessions": 3,
+  "totalMessages": 0,
+  "sessions": [
+    {
+      "sessionId": "6707d4a475f3a28c81d219eb",
+      "userId": "orperets11@gmail.com",
+      "title": "עזרה בבניית שאילתה (2024-10-10)",
+      "createdAt": "2024-10-10T13:20:35.934Z",
+      "lastMessageTimestamp": "2024-10-10T13:20:35.934Z",
+      "messageCount": 0,
+      "messages": []
+    },
+    {
+      "sessionId": "6719ebc25ee2ccfbbe82dad3",
+      "userId": "michal.pauzner@shenkar.ac.il",
+      "title": "בוקר טוב מייקל (2024-10-24)",
+      "createdAt": "2024-10-24T06:40:01.390Z",
+      "lastMessageTimestamp": "2024-10-24T06:40:01.390Z",
+      "messageCount": 0,
+      "messages": []
+    },
+    {
+      "sessionId": "671f7a9afdef92081dcf162e",
+      "userId": "michal.pauzner@shenkar.ac.il",
+      "title": "היי מה שלומך? (2024-10-28)",
+      "createdAt": "2024-10-28T11:50:49.287Z",
+      "lastMessageTimestamp": "2024-10-28T11:50:49.287Z",
+      "messageCount": 0,
+      "messages": []
+    }
+  ]
+}
